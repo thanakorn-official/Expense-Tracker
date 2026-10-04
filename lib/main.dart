@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/dashboard_screen.dart'; // เพิ่มบรรทัดนี้
+import 'screens/dashboard_screen.dart';
 
 void main() {
   runApp(const ExpenseTrackerApp());
@@ -13,11 +13,29 @@ class ExpenseTrackerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Expense Tracker',
-      debugShowCheckedModeBanner: false, // ปิดแถบ Debug สีแดงมุมขวาบน
+      debugShowCheckedModeBanner: false,
+
+      // 1. ตั้งค่าธีมสว่าง (Light Mode)
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
       ),
+
+      // 2. ตั้งค่าธีมมืด (Dark Mode)
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+
+      // 3. กำหนดให้แอปเปลี่ยนธีมตามการตั้งค่าของระบบเครื่องมือถือ
+      themeMode: ThemeMode.system,
+
       home: const DashboardScreen(),
     );
   }
