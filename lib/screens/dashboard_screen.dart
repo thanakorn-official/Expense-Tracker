@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart'; // ใช้สำหรับกราฟวงกลม
 
 import '../models/transaction_model.dart';
 
@@ -11,6 +12,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  // ข้อมูลสมมติเริ่มต้น
   final List<TransactionModel> _transactions = [
     TransactionModel(
       id: '1',
@@ -34,6 +36,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
       isExpense: true,
     ),
   ];
+
+  // ฟังก์ชันคำนวณยอดรวม
+  double get _totalIncome => _transactions
+      .where((tx) => !tx.isExpense)
+      .fold(0.0, (sum, item) => sum + item.amount);
+  double get _totalExpense => _transactions
+      .where((tx) => tx.isExpense)
+      .fold(0.0, (sum, item) => sum + item.amount);
+  double get _balance => _totalIncome - _totalExpense;
+
+  // ฟังก์ชันช่วยสร้างกล่องตัวเลขรายรับ-รายจ่าย
+  Widget _buildSummaryItem(String title, double amount, Color color) {
+    return Column(
+      children: [
+        Text(title, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        const SizedBox(height: 4),
+        Text(
+          '${NumberFormat('#,##0.00').format(amount)} ฿',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
 
   // ฟังก์ชันลบรายการ
   void _deleteTransaction(String id) {
@@ -77,7 +106,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _transactions[index] = tx.copyWith(
                   title: titleController.text,
                   amount: double.tryParse(amountController.text) ?? tx.amount,
-                  updatedAt: DateTime.now(), // บันทึกประวัติเวลาแก้ไขตรงนี้
+                  updatedAt: DateTime.now(), // บันทึกประวัติเวลาแก้ไข
                 );
               });
               Navigator.pop(ctx);
@@ -102,7 +131,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        // ใช้ StatefulBuilder เพื่อให้ปุ่มสลับรายรับ-รายจ่าย อัปเดตสีได้ภายใน Bottom Sheet
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
             return Padding(
@@ -179,8 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                         // สร้าง Object รายการใหม่
                         final newTx = TransactionModel(
-                          id: DateTime.now()
-                              .toString(), // ใช้เวลาปัจจุบันสร้าง ID ชั่วคราว
+                          id: DateTime.now().toString(),
                           title: titleController.text,
                           amount: double.tryParse(amountController.text) ?? 0.0,
                           date: DateTime.now(),
@@ -192,7 +219,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           _transactions.insert(0, newTx);
                         });
 
-                        Navigator.pop(ctx); // ปิดหน้าต่างลง
+                        Navigator.pop(ctx);
                       },
                       child: const Text(
                         'บันทึกรายการ',
@@ -219,13 +246,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: Column(
         children: [
+          // --- ส่วนที่ 1: กราฟวงกลม ---
+          const SizedBox(height: 24),
+          if (_totalIncome == 0 && _totalExpense == 0)
+            const Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Text(
+                'ยังไม่มีข้อมูลการทำรายการ',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          else
+            SizedBox(
+              height: 180,
+              child: PieChart(
+                PieChartData(
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 40,
+                  sections: [
+                    if (_totalIncome > 0)
+                      PieChartSectionData(
+                        color: Colors.green,
+                        value: _totalIncome,
+                        title:
+                            'รายรับ\n${(_totalIncome / (_totalIncome + _totalExpense) * 100).toStringAsFixed(0)}%',
+                        radius: 50,
+                        titleStyle: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    if (_totalExpense > 0)
+                      PieChartSectionData(
+                        color: Colors.redAccent,
+                        value: _totalExpense,
+                        title:
+                            'รายจ่าย\n${(_totalExpense / (_totalIncome + _totalExpense) * 100).toStringAsFixed(0)}%',
+                        radius: 50,
+                        titleStyle: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 16),
+
+          // --- ส่วนที่ 2: สรุปยอดเป็นตัวเลข ---
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildSummaryItem('รายรับรวม', _totalIncome, Colors.green),
+              _buildSummaryItem(
+                'ยอดคงเหลือ',
+                _balance,
+                _balance >= 0 ? Colors.blue : Colors.red,
+              ),
+              _buildSummaryItem('รายจ่ายรวม', _totalExpense, Colors.redAccent),
+            ],
+          ),
+          const Divider(height: 32),
+
+          // --- ส่วนที่ 3: หัวข้อรายการย้อนหลัง ---
           const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text(
-              'รายการย้อนหลัง',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'รายการย้อนหลัง (ปัดซ้ายเพื่อลบ)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
+          const SizedBox(height: 8),
+
+          // --- ส่วนที่ 4: รายการ List ---
           Expanded(
             child: ListView.builder(
               itemCount: _transactions.length,
@@ -246,7 +345,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   direction: DismissDirection.endToStart,
                   onDismissed: (direction) => _deleteTransaction(tx.id),
-                  // ครอบ ListTile ด้วย GestureDetector หรือ InkWell เพื่อให้กดแก้ไขได้
                   child: InkWell(
                     onTap: () => _showEditDialog(tx, index),
                     child: Card(
@@ -272,7 +370,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(formattedDate),
-                            // ตรวจสอบว่ามีประวัติการแก้ไขหรือไม่ ถ้ามีให้แสดงเพิ่ม
                             if (tx.updatedAt != null)
                               Text(
                                 '(แก้ไขล่าสุด: ${DateFormat('dd/MM/yyyy HH:mm').format(tx.updatedAt!)})',
