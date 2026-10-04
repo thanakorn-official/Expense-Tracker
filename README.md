@@ -1,31 +1,82 @@
-# 💰 Expense Tracker App
-แอปพลิเคชันบันทึกรายรับ-รายจ่ายที่พัฒนาด้วย **Flutter** เน้นการใช้งานที่ง่าย รวดเร็ว และมีหน้าตา UI ที่สวยงาม
+<div align="center">
 
-![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
-![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
+# 💰 EXPENSE TRACKER
+
+<p>
+  <img src="https://img.shields.io/badge/STATUS-COMPLETED-brightgreen?style=flat-square" alt="Status Completed">
+  <img src="https://img.shields.io/badge/PLATFORM-ANDROID%20%2F%20WEB-blue?style=flat-square" alt="Platform Android Web">
+  <img src="https://img.shields.io/badge/FRAMEWORK-FLUTTER-blueviolet?style=flat-square" alt="Framework Flutter">
+  <img src="https://img.shields.io/badge/DATABASE-FIREBASE-orange?style=flat-square" alt="Database Firebase">
+</p>
+
+</div>
 
 ---
 
-## ✨ ฟีเจอร์หลัก (Features)
-- 📊 **Dashboard:** หน้าจอสรุปยอดเงินคงเหลือและแสดงรายการล่าสุด
-- ➕ **Add Transaction:** ระบบเพิ่มรายการรายรับและรายจ่ายที่ใช้งานง่าย
-- 🎨 **Beautiful UI:** ออกแบบหน้าจอให้ดูสะอาดตาและรองรับ Material Design 3
-- 💾 **Local Storage:** บันทึกข้อมูลลงในเครื่อง (อยู่ในระหว่างการพัฒนา)
+### 📝 รายละเอียดโปรเจกต์ (Project Overview)
 
-## 📱 ภาพหน้าจอ (Screenshots)
-*(สามารถนำรูปภาพหน้าจอแอปมาใส่ตรงนี้ในอนาคตได้ โดยนำไฟล์รูปไปใส่ในโฟลเดอร์รูปภาพแล้วอ้างอิง path)*
+**Expense Tracker** เป็นแอปพลิเคชันมือถือและเว็บแอปสำหรับบันทึกและบริหารจัดการรายรับ-รายจ่ายส่วนตัว พัฒนาขึ้นด้วย Flutter และเชื่อมต่อฐานข้อมูลแบบเรียลไทม์ด้วย Firebase (Cloud Firestore) เพื่อให้ข้อมูลซิงก์ตรงกันทุกอุปกรณ์อย่างไร้รอยต่อ ตัวแอปถูกออกแบบมาให้มี UI ที่สะอาดตา รองรับ Dark Mode อัตโนมัติตามระบบ พร้อมระบบจัดหมวดหมู่พร้อมไอคอน กราฟวงกลมสรุปสัดส่วนการเงิน ระบบเพิ่ม-ลบ-แก้ไขข้อมูล และบันทึกประวัติการแก้ไขล่าสุดอย่างเป็นระบบ 🚀
 
-| หน้าหลัก (Dashboard) | เพิ่มรายการ (Add) |
-| :---: | :---: |
-| <img src="https://via.placeholder.com/250x500.png?text=Dashboard+Screen" width="250"> | <img src="https://via.placeholder.com/250x500.png?text=Add+Screen" width="250"> |
+---
 
-## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
-* **Framework:** [Flutter](https://flutter.dev/)
-* **Language:** Dart
-* **Architecture:** MVC / Provider (Upcoming)
+### 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
 
-## 🚀 วิธีการติดตั้งและรันโปรเจกต์ (Getting Started)
+* **Core Framework:** Flutter (Dart) 💙
+* **Cloud Database:** Firebase Cloud Firestore (Real-time Sync) 🔥
+* **Data Visualization:** FL Chart (Circular / Pie Chart) 📊
+* **UI & Date Formatting:** Intl & Material Design 3 🎨
+* **App Branding:** Flutter Launcher Icons & Flutter Native Splash 🖼️
+* **Version Control:** Git & GitHub 🐙
 
-1. โคลนโปรเจกต์ลงมาที่เครื่องคอมพิวเตอร์ของคุณ:
-   ```bash
-   git clone [https://github.com/ช](https://github.com/ช)ื่อผู้ใช้ของคุณ/expense_tracker.git
+---
+
+### ✨ ฟีเจอร์หลัก (Key Features)
+
+* **Real-Time Cloud Synchronization:** ข้อมูลรายรับ-รายจ่ายเชื่อมต่อและอัปเดตตรงกันระหว่างมือถือและคอมพิวเตอร์แบบเรียลไทม์ผ่าน Firebase 🔥
+* **Interactive Dashboard & Pie Chart:** กราฟวงกลมแสดงสัดส่วนเปอร์เซ็นต์รายรับ-รายจ่าย พร้อมกล่องสรุปยอดเงินคงเหลือแบบอัตโนมัติ 📊
+* **Category Management & Icons:** ระบบหมวดหมู่พร้อมไอคอนประจำรายการ (เช่น อาหาร, เดินทาง, ช้อปปิ้ง, บิล, เงินเดือน) 🏷️
+* **Swipe-to-Delete Transaction:** ระบบปัดหน้าจอไปทางซ้ายเพื่อลบรายการได้อย่างสะดวกรวดเร็ว 🗑️
+* **Edit with History Log:** ฟังก์ชันแก้ไขข้อมูลรายการ พร้อมบันทึกและแสดงเวลา (แก้ไขล่าสุด: วัน/เวลา) กำกับไว้อย่างชัดเจน ⏱️
+* **Dark Mode Support:** รองรับการปรับเปลี่ยนธีมสว่างและมืดตามการตั้งค่าของระบบมือถือ (ThemeMode.system) 🌙
+* **Custom Branding & Splash:** ปรับแต่งไอคอนแอปพลิเคชันเฉพาะตัว และหน้าจอ Native Splash Screen ตอนเปิดแอป 🚀
+
+---
+
+### 📥 ดาวน์โหลดและติดตั้ง (Download & Installation)
+
+สำหรับผู้ใช้งานทั่วไป สามารถดาวน์โหลดไฟล์ติดตั้ง APK ไปใช้งานบนมือถือ Android ได้ทันที:
+
+1. ไปที่เมนู **Releases** ด้านขวาของหน้าเพจนี้ 📦
+2. ดาวน์โหลดไฟล์ `app-release.apk` 📥
+3. ติดตั้งลงบนมือถือ Android เพื่อใช้งานได้ทันที 📱
+
+---
+
+### 💻 สำหรับนักพัฒนา (Development & Build)
+
+หากต้องการรันจากซอร์สโค้ดหรือพัฒนาฟีเจอร์เพิ่มเติม สามารถทำตามขั้นตอนดังนี้:
+
+```bash
+# 1. โคลนโปรเจกต์และติดตั้งแพ็กเกจที่จำเป็น
+flutter pub get
+
+# 2. รันโปรเจกต์ในโหมดพัฒนา
+flutter run
+
+# 3. สร้างไฟล์ติดตั้ง APK สำหรับ Android (Release Mode)
+flutter build apk --release
+
+## 📂 โครงสร้างไฟล์ในโปรเจกต์ (Project Structure)
+
+```text
+🧾Expense_Tracker/
+├── 📱android/            # การตั้งค่าระบบ Android และ App Icon
+├── 📱ios/                # การตั้งค่าระบบ iOS
+├── 🖼️assets/             # จัดเก็บไฟล์รูปภาพและโลโก้ (logo.png)
+├── 🏠lib/                # ซอร์สโค้ดหลักของแอปพลิเคชัน
+│   ├── ✨models/         # โครงสร้างข้อมูล (transaction_model.dart)
+│   ├── ✨screens/        # หน้าจอการใช้งาน (dashboard_screen.dart)
+│   └── ✨main.dart       # จุดเริ่มต้นแอปและเชื่อมต่อ Firebase
+├── 📄pubspec.yaml        # รายการแพ็กเกจและตั้งค่า Asset/Splash
+└── 📄README.md           # รายละเอียดโปรเจกต์
+```
