@@ -12,7 +12,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // กำหนดไอคอนสำหรับแต่ละหมวดหมู่
   final Map<String, IconData> _categoryIcons = {
     'อาหาร': Icons.restaurant,
     'เดินทาง': Icons.directions_car,
@@ -22,7 +21,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'อื่นๆ': Icons.category,
   };
 
-  // ข้อมูลสมมติที่เพิ่มหมวดหมู่เข้าไป
   final List<TransactionModel> _transactions = [
     TransactionModel(
       id: '1',
@@ -89,7 +87,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        // ใช้ StatefulBuilder เพื่อให้อัปเดต Dropdown ได้
         builder: (context, setStateDialog) {
           return AlertDialog(
             title: const Text('แก้ไขรายการ'),
@@ -107,7 +104,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 16),
-                // กล่องเลือกหมวดหมู่
                 DropdownButtonFormField<String>(
                   value: _categoryIcons.containsKey(selectedCategory)
                       ? selectedCategory
@@ -407,7 +403,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         vertical: 8,
                       ),
                       child: ListTile(
-                        // ส่วนที่เปลี่ยนไป: ดึงไอคอนและสีมาแสดง
                         leading: CircleAvatar(
                           backgroundColor: tx.isExpense
                               ? Colors.redAccent.withOpacity(0.2)
