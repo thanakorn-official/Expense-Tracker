@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ดึงข้อมูลจากคลาวด์
 
 import '../models/transaction_model.dart';
 
@@ -21,40 +22,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'อื่นๆ': Icons.category,
   };
 
-  final List<TransactionModel> _transactions = [
-    TransactionModel(
-      id: '1',
-      title: 'ข้าวกะเพราหมูกรอบ',
-      amount: 60,
-      date: DateTime.now(),
-      isExpense: true,
-      category: 'อาหาร',
-    ),
-    TransactionModel(
-      id: '2',
-      title: 'เงินเดือน',
-      amount: 35000,
-      date: DateTime.now(),
-      isExpense: false,
-      category: 'เงินเดือน/รายรับ',
-    ),
-    TransactionModel(
-      id: '3',
-      title: 'ค่ากาแฟ',
-      amount: 80,
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      isExpense: true,
-      category: 'อาหาร',
-    ),
-  ];
-
-  double get _totalIncome => _transactions
-      .where((tx) => !tx.isExpense)
-      .fold(0.0, (sum, item) => sum + item.amount);
-  double get _totalExpense => _transactions
-      .where((tx) => tx.isExpense)
-      .fold(0.0, (sum, item) => sum + item.amount);
-  double get _balance => _totalIncome - _totalExpense;
+  // อ้างอิงไปยัง Collection ชื่อ 'transactions' บน Firestore
+  final CollectionReference _transactionsCollection = FirebaseFirestore.instance
+      .collection('transactions');
 
   Widget _buildSummaryItem(String title, double amount, Color color) {
     return Column(
@@ -73,13 +43,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _deleteTransaction(String id) {
-    setState(() {
-      _transactions.removeWhere((tx) => tx.id == id);
-    });
-  }
-
-  void _showEditDialog(TransactionModel tx, int index) {
+  // ฟังก์ชันเปิดหน้าต่างแก้ไขรายการ (อัปเดตข้อมูลขึ้น Firestore)
+  void _showEditDialog(TransactionModel tx) {
     final titleController = TextEditingController(text: tx.title);
     final amountController = TextEditingController(text: tx.amount.toString());
     String selectedCategory = tx.category;
@@ -138,14 +103,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  setState(() {
-                    _transactions[index] = tx.copyWith(
-                      title: titleController.text,
-                      amount:
-                          double.tryParse(amountController.text) ?? tx.amount,
-                      category: selectedCategory,
-                      updatedAt: DateTime.now(),
-                    );
+                  // ส่งข้อมูลที่แก้ไขไปอัปเดตบน Firestore
+                  _transactionsCollection.doc(tx.id).update({
+                    'title': titleController.text,
+                    'amount':
+                        double.tryParse(amountController.text) ?? tx.amount,
+                    'category': selectedCategory,
+                    'updatedAt': DateTime.now().toIso8601String(),
                   });
                   Navigator.pop(ctx);
                 },
@@ -158,6 +122,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ฟังก์ชันเปิดหน้าต่างเพิ่มรายการใหม่ (บันทึกข้อมูลลง Firestore)
   void _showAddTransactionSheet(BuildContext context) {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
@@ -266,16 +231,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             amountController.text.isEmpty)
                           return;
 
-                        final newTx = TransactionModel(
-                          id: DateTime.now().toString(),
-                          title: titleController.text,
-                          amount: double.tryParse(amountController.text) ?? 0.0,
-                          date: DateTime.now(),
-                          isExpense: isExpense,
-                          category: selectedCategory,
-                        );
+                        // ส่งข้อมูลรายการใหม่ขึ้น Firestore
+                        _transactionsCollection.add({
+                          'title': titleController.text,
+                          'amount':
+                              double.tryParse(amountController.text) ?? 0.0,
+                          'date': DateTime.now().toIso8601String(),
+                          'isExpense': isExpense ? 1 : 0,
+                          'category': selectedCategory,
+                        });
 
-                        setState(() => _transactions.insert(0, newTx));
                         Navigator.pop(ctx);
                       },
                       child: const Text(
@@ -301,153 +266,195 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: const Text('บันทึกรายรับ-รายจ่าย'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 24),
-          if (_totalIncome == 0 && _totalExpense == 0)
-            const Padding(
-              padding: EdgeInsets.all(32.0),
-              child: Text(
-                'ยังไม่มีข้อมูลการทำรายการ',
-                style: TextStyle(color: Colors.grey),
-              ),
-            )
-          else
-            SizedBox(
-              height: 180,
-              child: PieChart(
-                PieChartData(
-                  sectionsSpace: 2,
-                  centerSpaceRadius: 40,
-                  sections: [
-                    if (_totalIncome > 0)
-                      PieChartSectionData(
-                        color: Colors.green,
-                        value: _totalIncome,
-                        title:
-                            'รายรับ\n${(_totalIncome / (_totalIncome + _totalExpense) * 100).toStringAsFixed(0)}%',
-                        radius: 50,
-                        titleStyle: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    if (_totalExpense > 0)
-                      PieChartSectionData(
-                        color: Colors.redAccent,
-                        value: _totalExpense,
-                        title:
-                            'รายจ่าย\n${(_totalExpense / (_totalIncome + _totalExpense) * 100).toStringAsFixed(0)}%',
-                        radius: 50,
-                        titleStyle: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildSummaryItem('รายรับรวม', _totalIncome, Colors.green),
-              _buildSummaryItem(
-                'ยอดคงเหลือ',
-                _balance,
-                _balance >= 0 ? Colors.blue : Colors.red,
-              ),
-              _buildSummaryItem('รายจ่ายรวม', _totalExpense, Colors.redAccent),
-            ],
-          ),
-          const Divider(height: 32),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'รายการย้อนหลัง (ปัดซ้ายเพื่อลบ)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _transactions.length,
-              itemBuilder: (context, index) {
-                final tx = _transactions[index];
-                final formattedAmount = NumberFormat('#,##0.00')
-                    .format(tx.amount);
-                final formattedDate = DateFormat('dd/MM/yyyy HH:mm')
-                    .format(tx.date);
+      // ใช้ StreamBuilder ครอบเนื้อหาทั้งหมดเพื่อดึงข้อมูลแบบเรียลไทม์
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _transactionsCollection
+            .orderBy('date', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('เกิดข้อผิดพลาด: ${snapshot.error}'));
+          }
 
-                return Dismissible(
-                  key: ValueKey(tx.id),
-                  background: Container(
-                    color: Colors.red,
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20),
-                    child: const Icon(Icons.delete, color: Colors.white),
+          // แปลงข้อมูลจาก Firestore เป็น TransactionModel
+          final List<TransactionModel> transactions = snapshot.data!.docs.map((
+            doc,
+          ) {
+            final data = doc.data() as Map<String, dynamic>;
+            data['id'] = doc.id; // ใช้ Document ID จาก Firestore
+            return TransactionModel.fromMap(data);
+          }).toList();
+
+          // คำนวณยอดรวม
+          double totalIncome = transactions
+              .where((tx) => !tx.isExpense)
+              .fold(0.0, (sum, item) => sum + item.amount);
+          double totalExpense = transactions
+              .where((tx) => tx.isExpense)
+              .fold(0.0, (sum, item) => sum + item.amount);
+          double balance = totalIncome - totalExpense;
+
+          return Column(
+            children: [
+              const SizedBox(height: 24),
+              if (totalIncome == 0 && totalExpense == 0)
+                const Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Text(
+                    'ยังไม่มีข้อมูลการทำรายการ',
+                    style: TextStyle(color: Colors.grey),
                   ),
-                  direction: DismissDirection.endToStart,
-                  onDismissed: (direction) => _deleteTransaction(tx.id),
-                  child: InkWell(
-                    onTap: () => _showEditDialog(tx, index),
-                    child: Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: tx.isExpense
-                              ? Colors.redAccent.withOpacity(0.2)
-                              : Colors.green.withOpacity(0.2),
-                          child: Icon(
-                            _categoryIcons[tx.category] ?? Icons.category,
-                            color: tx.isExpense
-                                ? Colors.redAccent
-                                : Colors.green,
+                )
+              else
+                SizedBox(
+                  height: 180,
+                  child: PieChart(
+                    PieChartData(
+                      sectionsSpace: 2,
+                      centerSpaceRadius: 40,
+                      sections: [
+                        if (totalIncome > 0)
+                          PieChartSectionData(
+                            color: Colors.green,
+                            value: totalIncome,
+                            title:
+                                'รายรับ\n${(totalIncome / (totalIncome + totalExpense) * 100).toStringAsFixed(0)}%',
+                            radius: 50,
+                            titleStyle: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        title: Text(
-                          tx.title,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(formattedDate),
-                            if (tx.updatedAt != null)
-                              Text(
-                                '(แก้ไขล่าสุด: ${DateFormat('dd/MM/yyyy HH:mm').format(tx.updatedAt!)})',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange,
-                                ),
-                              ),
-                          ],
-                        ),
-                        trailing: Text(
-                          '${tx.isExpense ? '-' : '+'}$formattedAmount ฿',
-                          style: TextStyle(
-                            color: tx.isExpense ? Colors.red : Colors.green,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                        if (totalExpense > 0)
+                          PieChartSectionData(
+                            color: Colors.redAccent,
+                            value: totalExpense,
+                            title:
+                                'รายจ่าย\n${(totalExpense / (totalIncome + totalExpense) * 100).toStringAsFixed(0)}%',
+                            radius: 50,
+                            titleStyle: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                      ),
+                      ],
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-        ],
+                ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildSummaryItem('รายรับรวม', totalIncome, Colors.green),
+                  _buildSummaryItem(
+                    'ยอดคงเหลือ',
+                    balance,
+                    balance >= 0 ? Colors.blue : Colors.red,
+                  ),
+                  _buildSummaryItem(
+                    'รายจ่ายรวม',
+                    totalExpense,
+                    Colors.redAccent,
+                  ),
+                ],
+              ),
+              const Divider(height: 32),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'รายการย้อนหลัง (ปัดซ้ายเพื่อลบ)',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: transactions.length,
+                  itemBuilder: (context, index) {
+                    final tx = transactions[index];
+                    final formattedAmount = NumberFormat('#,##0.00')
+                        .format(tx.amount);
+                    final formattedDate = DateFormat('dd/MM/yyyy HH:mm')
+                        .format(tx.date);
+
+                    return Dismissible(
+                      key: ValueKey(tx.id),
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      direction: DismissDirection.endToStart,
+                      onDismissed: (direction) {
+                        // สั่งลบข้อมูลออกจาก Firestore
+                        _transactionsCollection.doc(tx.id).delete();
+                      },
+                      child: InkWell(
+                        onTap: () => _showEditDialog(tx),
+                        child: Card(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: tx.isExpense
+                                  ? Colors.redAccent.withOpacity(0.2)
+                                  : Colors.green.withOpacity(0.2),
+                              child: Icon(
+                                _categoryIcons[tx.category] ?? Icons.category,
+                                color: tx.isExpense
+                                    ? Colors.redAccent
+                                    : Colors.green,
+                              ),
+                            ),
+                            title: Text(
+                              tx.title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(formattedDate),
+                                if (tx.updatedAt != null)
+                                  Text(
+                                    '(แก้ไขล่าสุด: ${DateFormat('dd/MM/yyyy HH:mm').format(tx.updatedAt!)})',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            trailing: Text(
+                              '${tx.isExpense ? '-' : '+'}$formattedAmount ฿',
+                              style: TextStyle(
+                                color: tx.isExpense ? Colors.red : Colors.green,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddTransactionSheet(context),
