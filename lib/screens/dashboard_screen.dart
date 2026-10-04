@@ -89,6 +89,127 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ฟังก์ชันเปิดหน้าต่างเพิ่มรายการใหม่ (Bottom Sheet)
+  void _showAddTransactionSheet(BuildContext context) {
+    final titleController = TextEditingController();
+    final amountController = TextEditingController();
+    bool isExpense = true; // ตั้งค่าเริ่มต้นให้เป็นรายจ่าย
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // อนุญาตให้ฟอร์มขยับขึ้นเมื่อคีย์บอร์ดโผล่
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        // ใช้ StatefulBuilder เพื่อให้ปุ่มสลับรายรับ-รายจ่าย อัปเดตสีได้ภายใน Bottom Sheet
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx)
+                    .viewInsets
+                    .bottom, // ดันฟอร์มหนีคีย์บอร์ด
+                left: 16,
+                right: 16,
+                top: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'เพิ่มรายการใหม่',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'ชื่อรายการ',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: amountController,
+                    decoration: const InputDecoration(
+                      labelText: 'จำนวนเงิน',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      const Text('ประเภท:', style: TextStyle(fontSize: 16)),
+                      ChoiceChip(
+                        label: const Text('รายจ่าย'),
+                        selected: isExpense,
+                        selectedColor: Colors.redAccent.withOpacity(0.3),
+                        onSelected: (val) {
+                          setModalState(() => isExpense = true);
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('รายรับ'),
+                        selected: !isExpense,
+                        selectedColor: Colors.green.withOpacity(0.3),
+                        onSelected: (val) {
+                          setModalState(() => isExpense = false);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () {
+                        // ป้องกันการกดบันทึกถ้ายังไม่ได้กรอกข้อมูล
+                        if (titleController.text.isEmpty ||
+                            amountController.text.isEmpty) {
+                          return;
+                        }
+
+                        // สร้าง Object รายการใหม่
+                        final newTx = TransactionModel(
+                          id: DateTime.now()
+                              .toString(), // ใช้เวลาปัจจุบันสร้าง ID ชั่วคราว
+                          title: titleController.text,
+                          amount: double.tryParse(amountController.text) ?? 0.0,
+                          date: DateTime.now(),
+                          isExpense: isExpense,
+                        );
+
+                        // อัปเดตหน้าจอโดยเพิ่มรายการใหม่เข้าไปไว้บนสุดของ List
+                        setState(() {
+                          _transactions.insert(0, newTx);
+                        });
+
+                        Navigator.pop(ctx); // ปิดหน้าต่างลง
+                      },
+                      child: const Text(
+                        'บันทึกรายการ',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,7 +222,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const Padding(
             padding: EdgeInsets.all(16.0),
             child: Text(
-              'รายการย้อนหลัง (ปัดซ้าย-ขวา เพื่อลบ)',
+              'รายการย้อนหลัง',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
@@ -180,9 +301,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          print('กดปุ่มเพิ่มรายการ');
-        },
+        onPressed: () => _showAddTransactionSheet(context),
         child: const Icon(Icons.add),
       ),
     );

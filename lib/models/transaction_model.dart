@@ -3,7 +3,8 @@ class TransactionModel {
   final String title;
   final double amount;
   final DateTime date;
-  final bool isExpense; // true = รายจ่าย, false = รายรับ
+  final bool isExpense;
+  final DateTime? updatedAt; // เพิ่มตัวแปรสำหรับเก็บเวลาที่แก้ไข
 
   TransactionModel({
     required this.id,
@@ -11,9 +12,28 @@ class TransactionModel {
     required this.amount,
     required this.date,
     required this.isExpense,
+    this.updatedAt,
   });
 
-  // แปลง Object เป็น Map สำหรับบันทึกลง Database
+  // ฟังก์ชันสำหรับโคลน Object เดิมแล้วเปลี่ยนแค่ค่าบางตัว
+  TransactionModel copyWith({
+    String? id,
+    String? title,
+    double? amount,
+    DateTime? date,
+    bool? isExpense,
+    DateTime? updatedAt,
+  }) {
+    return TransactionModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      isExpense: isExpense ?? this.isExpense,
+      updatedAt: updatedAt ?? this.updatedAt, // อัปเดตเวลาแก้ไข
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -21,10 +41,11 @@ class TransactionModel {
       'amount': amount,
       'date': date.toIso8601String(),
       'isExpense': isExpense ? 1 : 0,
+      // ถ้ามีข้อมูล updatedAt ให้แปลงเป็น String ด้วย
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
-  // แปลง Map จาก Database กลับมาเป็น Object
   factory TransactionModel.fromMap(Map<String, dynamic> map) {
     return TransactionModel(
       id: map['id'],
@@ -32,6 +53,9 @@ class TransactionModel {
       amount: map['amount'],
       date: DateTime.parse(map['date']),
       isExpense: map['isExpense'] == 1,
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'])
+          : null,
     );
   }
 }
