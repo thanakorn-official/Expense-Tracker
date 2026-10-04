@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart'; // ใช้สำหรับกราฟวงกลม
+import 'package:fl_chart/fl_chart.dart';
 
 import '../models/transaction_model.dart';
 
@@ -12,7 +12,17 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // ข้อมูลสมมติเริ่มต้น
+  // กำหนดไอคอนสำหรับแต่ละหมวดหมู่
+  final Map<String, IconData> _categoryIcons = {
+    'อาหาร': Icons.restaurant,
+    'เดินทาง': Icons.directions_car,
+    'ช้อปปิ้ง': Icons.shopping_bag,
+    'บิล/ค่าใช้จ่าย': Icons.receipt,
+    'เงินเดือน/รายรับ': Icons.account_balance_wallet,
+    'อื่นๆ': Icons.category,
+  };
+
+  // ข้อมูลสมมติที่เพิ่มหมวดหมู่เข้าไป
   final List<TransactionModel> _transactions = [
     TransactionModel(
       id: '1',
@@ -20,6 +30,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       amount: 60,
       date: DateTime.now(),
       isExpense: true,
+      category: 'อาหาร',
     ),
     TransactionModel(
       id: '2',
@@ -27,6 +38,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       amount: 35000,
       date: DateTime.now(),
       isExpense: false,
+      category: 'เงินเดือน/รายรับ',
     ),
     TransactionModel(
       id: '3',
@@ -34,10 +46,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       amount: 80,
       date: DateTime.now().subtract(const Duration(days: 1)),
       isExpense: true,
+      category: 'อาหาร',
     ),
   ];
 
-  // ฟังก์ชันคำนวณยอดรวม
   double get _totalIncome => _transactions
       .where((tx) => !tx.isExpense)
       .fold(0.0, (sum, item) => sum + item.amount);
@@ -46,7 +58,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       .fold(0.0, (sum, item) => sum + item.amount);
   double get _balance => _totalIncome - _totalExpense;
 
-  // ฟังก์ชันช่วยสร้างกล่องตัวเลขรายรับ-รายจ่าย
   Widget _buildSummaryItem(String title, double amount, Color color) {
     return Column(
       children: [
@@ -64,69 +75,102 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ฟังก์ชันลบรายการ
   void _deleteTransaction(String id) {
     setState(() {
       _transactions.removeWhere((tx) => tx.id == id);
     });
   }
 
-  // ฟังก์ชันเปิดหน้าต่างแก้ไขรายการ
   void _showEditDialog(TransactionModel tx, int index) {
     final titleController = TextEditingController(text: tx.title);
     final amountController = TextEditingController(text: tx.amount.toString());
+    String selectedCategory = tx.category;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('แก้ไขรายการ'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(labelText: 'ชื่อรายการ'),
+      builder: (ctx) => StatefulBuilder(
+        // ใช้ StatefulBuilder เพื่อให้อัปเดต Dropdown ได้
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: const Text('แก้ไขรายการ'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: 'ชื่อรายการ'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: amountController,
+                  decoration: const InputDecoration(labelText: 'จำนวนเงิน'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                // กล่องเลือกหมวดหมู่
+                DropdownButtonFormField<String>(
+                  value: _categoryIcons.containsKey(selectedCategory)
+                      ? selectedCategory
+                      : 'อื่นๆ',
+                  decoration: const InputDecoration(labelText: 'หมวดหมู่'),
+                  items: _categoryIcons.keys.map((String category) {
+                    return DropdownMenuItem<String>(
+                      value: category,
+                      child: Row(
+                        children: [
+                          Icon(
+                            _categoryIcons[category],
+                            color: Colors.grey,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(category),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (newValue) {
+                    setStateDialog(() => selectedCategory = newValue!);
+                  },
+                ),
+              ],
             ),
-            TextField(
-              controller: amountController,
-              decoration: const InputDecoration(labelText: 'จำนวนเงิน'),
-              keyboardType: TextInputType.number,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('ยกเลิก'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                // อัปเดตข้อมูลรายการเดิม พร้อมบันทึกเวลาแก้ไขล่าสุด
-                _transactions[index] = tx.copyWith(
-                  title: titleController.text,
-                  amount: double.tryParse(amountController.text) ?? tx.amount,
-                  updatedAt: DateTime.now(), // บันทึกประวัติเวลาแก้ไข
-                );
-              });
-              Navigator.pop(ctx);
-            },
-            child: const Text('บันทึก'),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('ยกเลิก'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _transactions[index] = tx.copyWith(
+                      title: titleController.text,
+                      amount:
+                          double.tryParse(amountController.text) ?? tx.amount,
+                      category: selectedCategory,
+                      updatedAt: DateTime.now(),
+                    );
+                  });
+                  Navigator.pop(ctx);
+                },
+                child: const Text('บันทึก'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  // ฟังก์ชันเปิดหน้าต่างเพิ่มรายการใหม่ (Bottom Sheet)
   void _showAddTransactionSheet(BuildContext context) {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
-    bool isExpense = true; // ตั้งค่าเริ่มต้นให้เป็นรายจ่าย
+    bool isExpense = true;
+    String selectedCategory = 'อาหาร';
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // อนุญาตให้ฟอร์มขยับขึ้นเมื่อคีย์บอร์ดโผล่
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -135,9 +179,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           builder: (BuildContext context, StateSetter setModalState) {
             return Padding(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx)
-                    .viewInsets
-                    .bottom, // ดันฟอร์มหนีคีย์บอร์ด
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
                 left: 16,
                 right: 16,
                 top: 24,
@@ -167,6 +209,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selectedCategory,
+                    decoration: const InputDecoration(
+                      labelText: 'หมวดหมู่',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _categoryIcons.keys.map((String category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Row(
+                          children: [
+                            Icon(
+                              _categoryIcons[category],
+                              color: Colors.grey,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(category),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (newValue) {
+                      setModalState(() => selectedCategory = newValue!);
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -175,17 +244,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         label: const Text('รายจ่าย'),
                         selected: isExpense,
                         selectedColor: Colors.redAccent.withOpacity(0.3),
-                        onSelected: (val) {
-                          setModalState(() => isExpense = true);
-                        },
+                        onSelected: (val) =>
+                            setModalState(() => isExpense = true),
                       ),
                       ChoiceChip(
                         label: const Text('รายรับ'),
                         selected: !isExpense,
                         selectedColor: Colors.green.withOpacity(0.3),
-                        onSelected: (val) {
-                          setModalState(() => isExpense = false);
-                        },
+                        onSelected: (val) =>
+                            setModalState(() => isExpense = false),
                       ),
                     ],
                   ),
@@ -199,26 +266,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         foregroundColor: Colors.white,
                       ),
                       onPressed: () {
-                        // ป้องกันการกดบันทึกถ้ายังไม่ได้กรอกข้อมูล
                         if (titleController.text.isEmpty ||
-                            amountController.text.isEmpty) {
+                            amountController.text.isEmpty)
                           return;
-                        }
 
-                        // สร้าง Object รายการใหม่
                         final newTx = TransactionModel(
                           id: DateTime.now().toString(),
                           title: titleController.text,
                           amount: double.tryParse(amountController.text) ?? 0.0,
                           date: DateTime.now(),
                           isExpense: isExpense,
+                          category: selectedCategory,
                         );
 
-                        // อัปเดตหน้าจอโดยเพิ่มรายการใหม่เข้าไปไว้บนสุดของ List
-                        setState(() {
-                          _transactions.insert(0, newTx);
-                        });
-
+                        setState(() => _transactions.insert(0, newTx));
                         Navigator.pop(ctx);
                       },
                       child: const Text(
@@ -246,7 +307,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: Column(
         children: [
-          // --- ส่วนที่ 1: กราฟวงกลม ---
           const SizedBox(height: 24),
           if (_totalIncome == 0 && _totalExpense == 0)
             const Padding(
@@ -295,8 +355,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           const SizedBox(height: 16),
-
-          // --- ส่วนที่ 2: สรุปยอดเป็นตัวเลข ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -310,8 +368,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const Divider(height: 32),
-
-          // --- ส่วนที่ 3: หัวข้อรายการย้อนหลัง ---
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: Align(
@@ -323,8 +379,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 8),
-
-          // --- ส่วนที่ 4: รายการ List ---
           Expanded(
             child: ListView.builder(
               itemCount: _transactions.length,
@@ -353,13 +407,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         vertical: 8,
                       ),
                       child: ListTile(
+                        // ส่วนที่เปลี่ยนไป: ดึงไอคอนและสีมาแสดง
                         leading: CircleAvatar(
                           backgroundColor: tx.isExpense
-                              ? Colors.redAccent
-                              : Colors.green,
+                              ? Colors.redAccent.withOpacity(0.2)
+                              : Colors.green.withOpacity(0.2),
                           child: Icon(
-                            tx.isExpense ? Icons.remove : Icons.add,
-                            color: Colors.white,
+                            _categoryIcons[tx.category] ?? Icons.category,
+                            color: tx.isExpense
+                                ? Colors.redAccent
+                                : Colors.green,
                           ),
                         ),
                         title: Text(

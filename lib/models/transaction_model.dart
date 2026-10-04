@@ -4,7 +4,8 @@ class TransactionModel {
   final double amount;
   final DateTime date;
   final bool isExpense;
-  final DateTime? updatedAt; // เพิ่มตัวแปรสำหรับเก็บเวลาที่แก้ไข
+  final DateTime? updatedAt;
+  final String category; // เพิ่มตัวแปรสำหรับเก็บหมวดหมู่
 
   TransactionModel({
     required this.id,
@@ -13,9 +14,9 @@ class TransactionModel {
     required this.date,
     required this.isExpense,
     this.updatedAt,
+    this.category = 'อื่นๆ', // ตั้งค่าเริ่มต้น
   });
 
-  // ฟังก์ชันสำหรับโคลน Object เดิมแล้วเปลี่ยนแค่ค่าบางตัว
   TransactionModel copyWith({
     String? id,
     String? title,
@@ -23,6 +24,7 @@ class TransactionModel {
     DateTime? date,
     bool? isExpense,
     DateTime? updatedAt,
+    String? category,
   }) {
     return TransactionModel(
       id: id ?? this.id,
@@ -30,7 +32,8 @@ class TransactionModel {
       amount: amount ?? this.amount,
       date: date ?? this.date,
       isExpense: isExpense ?? this.isExpense,
-      updatedAt: updatedAt ?? this.updatedAt, // อัปเดตเวลาแก้ไข
+      updatedAt: updatedAt ?? this.updatedAt,
+      category: category ?? this.category, // โคลนค่าหมวดหมู่
     );
   }
 
@@ -41,8 +44,8 @@ class TransactionModel {
       'amount': amount,
       'date': date.toIso8601String(),
       'isExpense': isExpense ? 1 : 0,
-      // ถ้ามีข้อมูล updatedAt ให้แปลงเป็น String ด้วย
       'updatedAt': updatedAt?.toIso8601String(),
+      'category': category,
     };
   }
 
@@ -56,6 +59,7 @@ class TransactionModel {
       updatedAt: map['updatedAt'] != null
           ? DateTime.parse(map['updatedAt'])
           : null,
+      category: map['category'] ?? 'อื่นๆ',
     );
   }
 }
