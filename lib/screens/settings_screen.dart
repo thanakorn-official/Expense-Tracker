@@ -50,13 +50,13 @@ class SettingsScreen extends StatelessWidget {
                         items: [
                           DropdownMenuItem(
                               value: ThemeMode.system,
-                              child: Text(T.get('theme_system'))),
+                              child: Text(T.get('System'))),
                           DropdownMenuItem(
                               value: ThemeMode.light,
-                              child: Text(T.get('theme_light'))),
+                              child: Text(T.get('Light Theme'))),
                           DropdownMenuItem(
                               value: ThemeMode.dark,
-                              child: Text(T.get('theme_dark'))),
+                              child: Text(T.get('Dark Theme'))),
                         ],
                         onChanged: (val) {
                           if (val != null) themeNotifier.value = val;
@@ -74,12 +74,11 @@ class SettingsScreen extends StatelessWidget {
                   showAboutDialog(
                     context: context,
                     applicationIcon: Image.asset(
-                      'assets/logo.png', // ดึงโลโก้แอปเดิมของคุณมาใช้
+                      'assets/logo.png',
                       width: 60,
                       height: 60,
-                      errorBuilder: (c, e, s) => const Icon(
-                          Icons.account_balance_wallet,
-                          size: 60), // กันพลาดเผื่อหาไฟล์ไม่เจอ
+                      errorBuilder: (c, e, s) =>
+                          const Icon(Icons.account_balance_wallet, size: 60),
                     ),
                     applicationName: T.get('appTitle'),
                     applicationVersion: T.get('app_version'),

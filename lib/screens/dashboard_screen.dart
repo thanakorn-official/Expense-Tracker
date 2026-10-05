@@ -510,13 +510,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   String displayHeader = key;
                   if (_groupType == 'daily')
                     displayHeader =
-                        '${languageNotifier.value == 'th' ? 'ประจำวันที่' : 'Date:'} $key';
+                        '${languageNotifier.value == 'th' ? 'วันที่' : 'Date:'} $key';
                   else if (_groupType == 'monthly')
                     displayHeader =
-                        '${languageNotifier.value == 'th' ? 'ประจำเดือน' : 'Month:'} $key';
+                        '${languageNotifier.value == 'th' ? 'เดือน' : 'Month:'} $key';
                   else
                     displayHeader =
-                        '${languageNotifier.value == 'th' ? 'ประจำปี' : 'Year:'} $key';
+                        '${languageNotifier.value == 'th' ? 'ปี' : 'Year:'} $key';
 
                   listItems.add(displayHeader);
                   listItems.addAll(tempMap[key]!);

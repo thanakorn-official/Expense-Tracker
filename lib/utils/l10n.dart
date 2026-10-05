@@ -33,7 +33,6 @@ class T {
       'oldest': 'เก่าสุด',
       'highest': 'ยอดสูงสุด',
       'lowest': 'ยอดต่ำสุด',
-      // หมวดหมู่
       'อาหาร': 'อาหาร',
       'เดินทาง': 'เดินทาง',
       'ช้อปปิ้ง': 'ช้อปปิ้ง',
@@ -43,6 +42,17 @@ class T {
       'close': 'ปิด',
       'pickColor': 'เลือกสีที่ต้องการ:',
       'changeColor': 'เปลี่ยนสีหมวดหมู่',
+      // --- หมวดหมู่ Settings ---
+      'settings': 'การตั้งค่า',
+      'language': 'ภาษา (Language)',
+      'theme': 'ธีมหน้าจอ',
+      'theme_system': 'ตามระบบ (System)',
+      'theme_light': 'โหมดสว่าง (Light)',
+      'theme_dark': 'โหมดมืด (Dark)',
+      'about': 'เกี่ยวกับแอป',
+      'app_version': 'เวอร์ชัน 1.0.0',
+      'about_desc':
+          'แอปพลิเคชันจัดการการเงินส่วนบุคคล พัฒนาด้วย Flutter และ Firebase เพื่อให้คุณติดตามรายรับ-รายจ่ายได้อย่างมีประสิทธิภาพ',
     },
     'en': {
       'appTitle': 'Expense Tracker',
@@ -84,12 +94,22 @@ class T {
       'close': 'Close',
       'pickColor': 'Choose color:',
       'changeColor': 'Change color',
+      // --- Settings ---
+      'settings': 'Settings',
+      'language': 'Language',
+      'theme': 'App Theme',
+      'theme_system': 'System Default',
+      'theme_light': 'Light Mode',
+      'theme_dark': 'Dark Mode',
+      'about': 'About App',
+      'app_version': 'Version 1.0.0',
+      'about_desc':
+          'A personal finance management app built with Flutter and Firebase to help you track your income and expenses efficiently.',
     }
   };
 
-  // ฟังก์ชันสำหรับเรียกใช้คำแปล
   static String get(String key) {
     final lang = languageNotifier.value;
-    return _dict[lang]?[key] ?? key; // ถ้าหาคำแปลไม่เจอ ให้คืนค่า key กลับไป
+    return _dict[lang]?[key] ?? key;
   }
 }
