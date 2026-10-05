@@ -46,7 +46,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final Set<String> _pendingDeleteIds = {};
 
-  // ตัวแปรสำหรับเก็บสถานะการกรองและการจัดเรียง
+  // ตัวแปรสำหรับเก็บสถานะการตั้งค่ามุมมอง
+  String _groupType =
+      'รายวัน'; // รายวัน, รายเดือน, รายปี, ไม่จัดกลุ่ม (Default = รายวัน)
   String _filterType = 'ทั้งหมด'; // ทั้งหมด, รายรับ, รายจ่าย
   String _sortOrder = 'ใหม่ล่าสุด'; // ใหม่ล่าสุด, เก่าสุด, ยอดสูงสุด, ยอดต่ำสุด
 
@@ -70,6 +72,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // วิดเจ็ตสำหรับสร้างปุ่ม Dropdown สไตล์เดียวกัน
+  Widget _buildDropdown(String value, List<String> items, IconData icon,
+      ValueChanged<String?> onChanged) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isDense: true,
+          icon: Padding(
+            padding: const EdgeInsets.only(left: 4.0),
+            child: Icon(icon, size: 16),
+          ),
+          style: TextStyle(
+            fontSize: 13,
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+          items: items.map((String val) {
+            return DropdownMenuItem(value: val, child: Text(val));
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
   void _showColorPickerDialog(String category) {
     showDialog(
       context: context,
@@ -80,7 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'เลือกสีที่ต้องการสำหรับหมวดหมู่นี้:',
+              'เลือกสีที่ต้องการ:',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 16),
@@ -395,7 +429,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             return Center(child: Text('เกิดข้อผิดพลาด: ${snapshot.error}'));
           }
 
-          // 1. ดึงข้อมูลทั้งหมดเพื่อใช้วิเคราะห์กราฟและยอดรวม (ไม่โดนฟิลเตอร์)
+          // 1. ดึงข้อมูลทั้งหมดเพื่อคำนวณสรุปยอด (กราฟ + ตัวเลขยอดรวม)
           final List<TransactionModel> allTransactions = snapshot.data!.docs
               .map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
@@ -413,7 +447,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               .fold(0.0, (sum, item) => sum + item.amount);
           double balance = totalIncome - totalExpense;
 
-          // 2. คัดกรองและจัดเรียงข้อมูลเฉพาะสำหรับแสดงในรายการย้อนหลัง (ListView)
+          // 2. กรองและจัดเรียงข้อมูลตามที่ผู้ใช้เลือก (รับ/จ่าย & เรียงลำดับ)
           List<TransactionModel> displayTransactions =
               allTransactions.where((tx) {
             if (_filterType == 'รายรับ') return !tx.isExpense;
@@ -428,6 +462,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (_sortOrder == 'ยอดต่ำสุด') return a.amount.compareTo(b.amount);
             return 0;
           });
+
+          // 3. จัดกลุ่มข้อมูล (Grouping) เป็น List เดียวกันเพื่อใช้สร้าง ListView.builder
+          List<dynamic> listItems =
+              []; // รองรับทั้ง String (Header) และ TransactionModel (Item)
+
+          if (_groupType == 'ไม่จัดกลุ่ม' || displayTransactions.isEmpty) {
+            listItems = displayTransactions;
+          } else {
+            // ดึงข้อมูลเข้ากลุ่ม
+            Map<String, List<TransactionModel>> tempMap = {};
+            for (var tx in displayTransactions) {
+              String key;
+              if (_groupType == 'รายวัน') {
+                key = DateFormat('dd/MM/yyyy').format(tx.date);
+              } else if (_groupType == 'รายเดือน') {
+                key = DateFormat('MM/yyyy').format(tx.date);
+              } else {
+                key = DateFormat('yyyy').format(tx.date);
+              }
+              tempMap.putIfAbsent(key, () => []).add(tx);
+            }
+
+            // เรียงลำดับกลุ่ม (Header Date) โดยอิงตามวันที่
+            List<String> sortedKeys = tempMap.keys.toList();
+            sortedKeys.sort((a, b) {
+              if (_groupType == 'รายวัน') {
+                return DateFormat('dd/MM/yyyy')
+                    .parse(b)
+                    .compareTo(DateFormat('dd/MM/yyyy').parse(a));
+              } else if (_groupType == 'รายเดือน') {
+                return DateFormat('MM/yyyy')
+                    .parse(b)
+                    .compareTo(DateFormat('MM/yyyy').parse(a));
+              } else {
+                return int.parse(b).compareTo(int.parse(a));
+              }
+            });
+
+            // ถ้าผู้ใช้เลือกจัดเรียง "เก่าสุด" ให้กลับหัวกลุ่มด้วย
+            if (_sortOrder == 'เก่าสุด') {
+              sortedKeys = sortedKeys.reversed.toList();
+            }
+
+            // แปลงใส่ listItems
+            for (var key in sortedKeys) {
+              String displayHeader = key;
+              if (_groupType == 'รายวัน')
+                displayHeader = 'วันที่ $key';
+              else if (_groupType == 'รายเดือน')
+                displayHeader = 'เดือน $key';
+              else
+                displayHeader = 'ปี $key';
+
+              listItems.add(displayHeader); // ใส่หัวข้อ
+              listItems.addAll(tempMap[key]!); // ใส่รายการย่อย
+            }
+          }
 
           return Column(
             children: [
@@ -452,7 +543,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           sections: () {
                             Map<String, double> categoryTotals = {};
                             for (var tx in allTransactions) {
-                              // กราฟยังคงใช้ข้อมูลรวมทั้งหมด
                               categoryTotals[tx.category] =
                                   (categoryTotals[tx.category] ?? 0.0) +
                                       tx.amount;
@@ -525,110 +615,83 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
               const Divider(height: 24),
-              // ส่วนควบคุม Filter และ Sort
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'รายการย้อนหลัง',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    Row(
-                      children: [
-                        // Dropdown แยกรับ-จ่าย
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primaryContainer
-                                .withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _filterType,
-                              isDense: true,
-                              icon: const Icon(Icons.filter_list, size: 16),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              items: ['ทั้งหมด', 'รายรับ', 'รายจ่าย']
-                                  .map((String val) {
-                                return DropdownMenuItem(
-                                    value: val, child: Text(val));
-                              }).toList(),
-                              onChanged: (val) =>
-                                  setState(() => _filterType = val!),
-                            ),
-                          ),
+              // ส่วนควบคุม มุมมอง/Filter/Sort
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text(
+                          'รายการย้อนหลัง',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
                         ),
-                        const SizedBox(width: 8),
-                        // Dropdown จัดเรียง
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .secondaryContainer
-                                .withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _sortOrder,
-                              isDense: true,
-                              icon: const Icon(Icons.sort, size: 16),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              items: [
-                                'ใหม่ล่าสุด',
-                                'เก่าสุด',
-                                'ยอดสูงสุด',
-                                'ยอดต่ำสุด'
-                              ].map((String val) {
-                                return DropdownMenuItem(
-                                    value: val, child: Text(val));
-                              }).toList(),
-                              onChanged: (val) =>
-                                  setState(() => _sortOrder = val!),
-                            ),
-                          ),
+                        Text(
+                          '(ปัดซ้ายที่รายการเพื่อลบ)',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '(ปัดซ้ายที่รายการเพื่อลบ)',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      children: [
+                        _buildDropdown(
+                            _groupType,
+                            ['รายวัน', 'รายเดือน', 'รายปี', 'ไม่จัดกลุ่ม'],
+                            Icons.date_range,
+                            (val) => setState(() => _groupType = val!)),
+                        _buildDropdown(
+                            _filterType,
+                            ['ทั้งหมด', 'รายรับ', 'รายจ่าย'],
+                            Icons.filter_list,
+                            (val) => setState(() => _filterType = val!)),
+                        _buildDropdown(
+                            _sortOrder,
+                            ['ใหม่ล่าสุด', 'เก่าสุด', 'ยอดสูงสุด', 'ยอดต่ำสุด'],
+                            Icons.sort,
+                            (val) => setState(() => _sortOrder = val!)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
+              // ลิสต์รายการที่รองรับทั้งการจัดกลุ่ม (Header) และข้อมูลปกติ
               Expanded(
-                child: displayTransactions.isEmpty
+                child: listItems.isEmpty
                     ? const Center(
                         child: Text('ไม่มีรายการที่ตรงกับเงื่อนไข',
                             style: TextStyle(color: Colors.grey)))
                     : ListView.builder(
-                        itemCount: displayTransactions.length,
+                        itemCount: listItems.length,
                         itemBuilder: (context, index) {
-                          // ใช้ข้อมูลจาก displayTransactions ที่ผ่านการกรองแล้ว
-                          final tx = displayTransactions[index];
+                          final item = listItems[index];
+
+                          // หากข้อมูลเป็น Text Header สำหรับการจัดกลุ่ม
+                          if (item is String) {
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                  left: 24, right: 16, top: 16, bottom: 4),
+                              child: Text(
+                                item,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            );
+                          }
+
+                          // หากข้อมูลเป็นรายการ Transaction ปกติ
+                          final tx = item as TransactionModel;
                           final formattedAmount =
                               NumberFormat('#,##0.00').format(tx.amount);
                           final formattedDate =
@@ -647,13 +710,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 children: [
                                   Icon(Icons.delete, color: Colors.white),
                                   SizedBox(width: 8),
-                                  Text(
-                                    'ลบ',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  Text('ลบ',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold)),
                                 ],
                               ),
                             ),
@@ -724,9 +784,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               onTap: () => _showEditDialog(tx),
                               child: Card(
                                 margin: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
+                                    horizontal: 16, vertical: 6),
                                 child: ListTile(
                                   leading: Tooltip(
                                     message: 'แตะเพื่อเปลี่ยนสีหมวดหมู่',
@@ -748,8 +806,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   title: Text(
                                     tx.title,
                                     style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                        fontWeight: FontWeight.bold),
                                   ),
                                   subtitle: Column(
                                     crossAxisAlignment:
@@ -760,9 +817,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         Text(
                                           '(แก้ไขล่าสุด: ${DateFormat('dd/MM/yyyy HH:mm').format(tx.updatedAt!)})',
                                           style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.orange,
-                                          ),
+                                              fontSize: 12,
+                                              color: Colors.orange),
                                         ),
                                     ],
                                   ),
