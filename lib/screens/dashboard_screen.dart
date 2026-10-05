@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // ดึงข้อมูลจากคลาวด์
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/transaction_model.dart';
 
@@ -22,7 +22,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'อื่นๆ': Icons.category,
   };
 
-  // อ้างอิงไปยัง Collection ชื่อ 'transactions' บน Firestore
+  // สีประจำแต่ละหมวดหมู่ (ใช้ร่วมกันทั้ง PieChart และรายการย้อนหลัง)
+  final Map<String, Color> _categoryColors = {
+    'อาหาร': Colors.orange,
+    'เดินทาง': Colors.blue,
+    'ช้อปปิ้ง': Colors.purple,
+    'บิล/ค่าใช้จ่าย': Colors.redAccent,
+    'เงินเดือน/รายรับ': Colors.green,
+    'อื่นๆ': Colors.teal,
+  };
+
+  // ชุดสีสำหรับให้เลือกเปลี่ยนสีหมวดหมู่
+  final List<Color> _availableColors = [
+    Colors.orange,
+    Colors.blue,
+    Colors.purple,
+    Colors.green,
+    Colors.redAccent,
+    Colors.teal,
+    Colors.pink,
+    Colors.amber,
+    Colors.cyan,
+    Colors.indigo,
+  ];
+
+  // รายการ Document ID ที่อยู่ในสถานะรอลบ (Undo 3 วินาที)
+  final Set<String> _pendingDeleteIds = {};
+
   final CollectionReference _transactionsCollection =
       FirebaseFirestore.instance.collection('transactions');
 
@@ -43,7 +69,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ฟังก์ชันเปิดหน้าต่างแก้ไขรายการ (อัปเดตข้อมูลขึ้น Firestore)
+  // หน้าต่างเลือกเปลี่ยนสีหมวดหมู่
+  void _showColorPickerDialog(String category) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('เปลี่ยนสีหมวดหมู่ "$category"'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'เลือกสีที่ต้องการสำหรับหมวดหมู่นี้:',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: _availableColors.map((color) {
+                final isSelected = _categoryColors[category] == color;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _categoryColors[category] = color;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: isSelected
+                          ? Border.all(color: Colors.white, width: 3)
+                          : null,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check, color: Colors.white)
+                        : null,
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ปิด'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // หน้าต่างแก้ไขรายการ
   void _showEditDialog(TransactionModel tx) {
     final titleController = TextEditingController(text: tx.title);
     final amountController = TextEditingController(text: tx.amount.toString());
@@ -53,6 +141,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setStateDialog) {
+          final currentColor =
+              _categoryColors[selectedCategory] ?? Colors.blueGrey;
           return AlertDialog(
             title: const Text('แก้ไขรายการ'),
             content: Column(
@@ -69,30 +159,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _categoryIcons.containsKey(selectedCategory)
-                      ? selectedCategory
-                      : 'อื่นๆ',
-                  decoration: const InputDecoration(labelText: 'หมวดหมู่'),
-                  items: _categoryIcons.keys.map((String category) {
-                    return DropdownMenuItem<String>(
-                      value: category,
-                      child: Row(
-                        children: [
-                          Icon(
-                            _categoryIcons[category],
-                            color: Colors.grey,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(category),
-                        ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _categoryIcons.containsKey(selectedCategory)
+                            ? selectedCategory
+                            : 'อื่นๆ',
+                        decoration:
+                            const InputDecoration(labelText: 'หมวดหมู่'),
+                        items: _categoryIcons.keys.map((String category) {
+                          final catColor =
+                              _categoryColors[category] ?? Colors.blueGrey;
+                          return DropdownMenuItem<String>(
+                            value: category,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _categoryIcons[category],
+                                  color: catColor,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(category),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (newValue) {
+                          setStateDialog(() => selectedCategory = newValue!);
+                        },
                       ),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    setStateDialog(() => selectedCategory = newValue!);
-                  },
+                    ),
+                    IconButton(
+                      tooltip: 'เปลี่ยนสีหมวดหมู่นี้',
+                      icon: Icon(Icons.palette, color: currentColor),
+                      onPressed: () => _showColorPickerDialog(selectedCategory),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -103,7 +207,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  // ส่งข้อมูลที่แก้ไขไปอัปเดตบน Firestore
                   _transactionsCollection.doc(tx.id).update({
                     'title': titleController.text,
                     'amount':
@@ -122,7 +225,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ฟังก์ชันเปิดหน้าต่างเพิ่มรายการใหม่ (บันทึกข้อมูลลง Firestore)
+  // หน้าต่างเพิ่มรายการใหม่
   void _showAddTransactionSheet(BuildContext context) {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
@@ -138,6 +241,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
+            final currentColor =
+                _categoryColors[selectedCategory] ?? Colors.blueGrey;
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx).viewInsets.bottom,
@@ -170,31 +275,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: selectedCategory,
-                    decoration: const InputDecoration(
-                      labelText: 'หมวดหมู่',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: _categoryIcons.keys.map((String category) {
-                      return DropdownMenuItem<String>(
-                        value: category,
-                        child: Row(
-                          children: [
-                            Icon(
-                              _categoryIcons[category],
-                              color: Colors.grey,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(category),
-                          ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: selectedCategory,
+                          decoration: const InputDecoration(
+                            labelText: 'หมวดหมู่',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: _categoryIcons.keys.map((String category) {
+                            final catColor =
+                                _categoryColors[category] ?? Colors.blueGrey;
+                            return DropdownMenuItem<String>(
+                              value: category,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _categoryIcons[category],
+                                    color: catColor,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(category),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (newValue) {
+                            setModalState(() => selectedCategory = newValue!);
+                          },
                         ),
-                      );
-                    }).toList(),
-                    onChanged: (newValue) {
-                      setModalState(() => selectedCategory = newValue!);
-                    },
+                      ),
+                      IconButton(
+                        tooltip: 'เปลี่ยนสีหมวดหมู่นี้',
+                        icon: Icon(Icons.palette, color: currentColor),
+                        onPressed: () =>
+                            _showColorPickerDialog(selectedCategory),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -232,7 +351,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           return;
                         }
 
-                        // ส่งข้อมูลรายการใหม่ขึ้น Firestore
                         _transactionsCollection.add({
                           'title': titleController.text,
                           'amount':
@@ -267,7 +385,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: const Text('บันทึกรายรับ-รายจ่าย'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      // ใช้ StreamBuilder ครอบเนื้อหาทั้งหมดเพื่อดึงข้อมูลแบบเรียลไทม์
       body: StreamBuilder<QuerySnapshot>(
         stream: _transactionsCollection
             .orderBy('date', descending: true)
@@ -280,16 +397,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             return Center(child: Text('เกิดข้อผิดพลาด: ${snapshot.error}'));
           }
 
-          // แปลงข้อมูลจาก Firestore เป็น TransactionModel
-          final List<TransactionModel> transactions = snapshot.data!.docs.map((
-            doc,
-          ) {
-            final data = doc.data() as Map<String, dynamic>;
-            data['id'] = doc.id; // ใช้ Document ID จาก Firestore
-            return TransactionModel.fromMap(data);
-          }).toList();
+          // แปลงข้อมูลและกรองเอารายการที่กำลังรอลบ (Undo) ออกจากการแสดงผลชั่วคราว
+          final List<TransactionModel> transactions = snapshot.data!.docs
+              .map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                data['id'] = doc.id;
+                return TransactionModel.fromMap(data);
+              })
+              .where((tx) => !_pendingDeleteIds.contains(tx.id))
+              .toList();
 
-          // คำนวณยอดรวม
           double totalIncome = transactions
               .where((tx) => !tx.isExpense)
               .fold(0.0, (sum, item) => sum + item.amount);
@@ -313,7 +430,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Column(
                   children: [
                     SizedBox(
-                      height: 200, // เพิ่มความสูงให้กราฟมีพื้นที่แสดงไอคอน
+                      height: 200,
                       child: PieChart(
                         PieChartData(
                           sectionsSpace: 2,
@@ -331,31 +448,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               (a, b) => a + b,
                             );
 
-                            final List<Color> colors = [
-                              Colors.blue,
-                              Colors.orange,
-                              Colors.purple,
-                              Colors.green,
-                              Colors.redAccent,
-                              Colors.teal,
-                            ];
-
-                            int i = 0;
                             return categoryTotals.entries.map((entry) {
-                              final category = entry.key; // ดึงชื่อหมวดหมู่
+                              final category = entry.key;
                               final amount = entry.value;
                               final percentage = totalSum > 0
                                   ? (amount / totalSum * 100)
                                   : 0.0;
-                              final color = colors[i++ % colors.length];
+                              // ดึงสีที่ตรงกับหมวดหมู่
+                              final color =
+                                  _categoryColors[category] ?? Colors.blueGrey;
 
                               return PieChartSectionData(
                                 color: color,
                                 value: amount,
-                                title:
-                                    '', // ซ่อน title เดิม เพราะจะใช้ badgeWidget แทน
-                                radius:
-                                    65, // ขยายความกว้างของเส้นกราฟเพื่อใส่ไอคอน
+                                title: '',
+                                radius: 65,
                                 badgeWidget: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -377,8 +484,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                   ],
                                 ),
-                                badgePositionPercentageOffset:
-                                    0.5, // จัดให้อยู่กึ่งกลาง
+                                badgePositionPercentageOffset: 0.5,
                               );
                             }).toList();
                           }(),
@@ -425,6 +531,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         NumberFormat('#,##0.00').format(tx.amount);
                     final formattedDate =
                         DateFormat('dd/MM/yyyy HH:mm').format(tx.date);
+                    final categoryColor =
+                        _categoryColors[tx.category] ?? Colors.blueGrey;
 
                     return Dismissible(
                       key: ValueKey(tx.id),
@@ -432,12 +540,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: Colors.red,
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 20),
-                        child: const Icon(Icons.delete, color: Colors.white),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Icon(Icons.delete, color: Colors.white),
+                            SizedBox(width: 8),
+                            Text(
+                              'ลบ',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       direction: DismissDirection.endToStart,
                       onDismissed: (direction) {
-                        // สั่งลบข้อมูลออกจาก Firestore
-                        _transactionsCollection.doc(tx.id).delete();
+                        final deletedTx = tx;
+
+                        // ซ่อนรายการออกจากหน้าจอทันทีเพื่อรองรับ Dismissible
+                        setState(() {
+                          _pendingDeleteIds.add(deletedTx.id);
+                        });
+
+                        bool isUndone = false;
+                        ScaffoldMessenger.of(context).clearSnackBars();
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(
+                              SnackBar(
+                                // 1. ตั้งค่าให้เป็นกล่องลอย
+                                behavior: SnackBarBehavior.floating,
+                                // 2. กำหนดระยะห่างจากขอบจอ
+                                margin: const EdgeInsets.only(
+                                    bottom: 24, left: 16, right: 16),
+                                // 3. สีพื้นหลังดำ โปร่งใส 75% (0.75)
+                                backgroundColor: Colors.black.withOpacity(0.75),
+                                // 4. ทำขอบให้มนสวยงาม
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                duration: const Duration(seconds: 3),
+                                content: Row(
+                                  children: [
+                                    const Icon(Icons.info_outline,
+                                        color: Colors.white, size: 20),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'ลบ "${deletedTx.title}" แล้ว',
+                                        style: const TextStyle(
+                                          color: Colors
+                                              .white, // ตัวอักษรสีขาวให้อ่านง่าย
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                action: SnackBarAction(
+                                  label: 'เลิกทำ',
+                                  textColor: Colors
+                                      .amberAccent, // สีปุ่มกดให้ตัดกับพื้นดำชัดๆ
+                                  onPressed: () {
+                                    isUndone = true;
+                                    setState(() {
+                                      _pendingDeleteIds.remove(deletedTx.id);
+                                    });
+                                  },
+                                ),
+                              ),
+                            )
+                            .closed
+                            .then((reason) {
+                          // หากไม่มีการกด Undo หลังครบ 3 วินาที จึงลบออกจาก Firestore
+                          if (!isUndone &&
+                              reason != SnackBarClosedReason.action) {
+                            _transactionsCollection.doc(deletedTx.id).delete();
+                            _pendingDeleteIds.remove(deletedTx.id);
+                          }
+                        });
                       },
                       child: InkWell(
                         onTap: () => _showEditDialog(tx),
@@ -447,15 +630,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             vertical: 8,
                           ),
                           child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: tx.isExpense
-                                  ? Colors.redAccent.withOpacity(0.2)
-                                  : Colors.green.withOpacity(0.2),
-                              child: Icon(
-                                _categoryIcons[tx.category] ?? Icons.category,
-                                color: tx.isExpense
-                                    ? Colors.redAccent
-                                    : Colors.green,
+                            leading: Tooltip(
+                              message: 'แตะเพื่อเปลี่ยนสีหมวดหมู่',
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: () =>
+                                    _showColorPickerDialog(tx.category),
+                                child: CircleAvatar(
+                                  backgroundColor:
+                                      categoryColor.withOpacity(0.2),
+                                  child: Icon(
+                                    _categoryIcons[tx.category] ??
+                                        Icons.category,
+                                    color: categoryColor,
+                                  ),
+                                ),
                               ),
                             ),
                             title: Text(
