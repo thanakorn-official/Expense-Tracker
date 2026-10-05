@@ -22,7 +22,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'อื่นๆ': Icons.category,
   };
 
-  // สีประจำแต่ละหมวดหมู่ (ใช้ร่วมกันทั้ง PieChart และรายการย้อนหลัง)
   final Map<String, Color> _categoryColors = {
     'อาหาร': Colors.orange,
     'เดินทาง': Colors.blue,
@@ -32,7 +31,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'อื่นๆ': Colors.teal,
   };
 
-  // ชุดสีสำหรับให้เลือกเปลี่ยนสีหมวดหมู่
   final List<Color> _availableColors = [
     Colors.orange,
     Colors.blue,
@@ -46,8 +44,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Colors.indigo,
   ];
 
-  // รายการ Document ID ที่อยู่ในสถานะรอลบ (Undo 3 วินาที)
   final Set<String> _pendingDeleteIds = {};
+
+  // ตัวแปรสำหรับเก็บสถานะการกรองและการจัดเรียง
+  String _filterType = 'ทั้งหมด'; // ทั้งหมด, รายรับ, รายจ่าย
+  String _sortOrder = 'ใหม่ล่าสุด'; // ใหม่ล่าสุด, เก่าสุด, ยอดสูงสุด, ยอดต่ำสุด
 
   final CollectionReference _transactionsCollection =
       FirebaseFirestore.instance.collection('transactions');
@@ -69,7 +70,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // หน้าต่างเลือกเปลี่ยนสีหมวดหมู่
   void _showColorPickerDialog(String category) {
     showDialog(
       context: context,
@@ -131,7 +131,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // หน้าต่างแก้ไขรายการ
   void _showEditDialog(TransactionModel tx) {
     final titleController = TextEditingController(text: tx.title);
     final amountController = TextEditingController(text: tx.amount.toString());
@@ -225,7 +224,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // หน้าต่างเพิ่มรายการใหม่
   void _showAddTransactionSheet(BuildContext context) {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
@@ -397,8 +395,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             return Center(child: Text('เกิดข้อผิดพลาด: ${snapshot.error}'));
           }
 
-          // แปลงข้อมูลและกรองเอารายการที่กำลังรอลบ (Undo) ออกจากการแสดงผลชั่วคราว
-          final List<TransactionModel> transactions = snapshot.data!.docs
+          // 1. ดึงข้อมูลทั้งหมดเพื่อใช้วิเคราะห์กราฟและยอดรวม (ไม่โดนฟิลเตอร์)
+          final List<TransactionModel> allTransactions = snapshot.data!.docs
               .map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 data['id'] = doc.id;
@@ -407,18 +405,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
               .where((tx) => !_pendingDeleteIds.contains(tx.id))
               .toList();
 
-          double totalIncome = transactions
+          double totalIncome = allTransactions
               .where((tx) => !tx.isExpense)
               .fold(0.0, (sum, item) => sum + item.amount);
-          double totalExpense = transactions
+          double totalExpense = allTransactions
               .where((tx) => tx.isExpense)
               .fold(0.0, (sum, item) => sum + item.amount);
           double balance = totalIncome - totalExpense;
 
+          // 2. คัดกรองและจัดเรียงข้อมูลเฉพาะสำหรับแสดงในรายการย้อนหลัง (ListView)
+          List<TransactionModel> displayTransactions =
+              allTransactions.where((tx) {
+            if (_filterType == 'รายรับ') return !tx.isExpense;
+            if (_filterType == 'รายจ่าย') return tx.isExpense;
+            return true;
+          }).toList();
+
+          displayTransactions.sort((a, b) {
+            if (_sortOrder == 'ใหม่ล่าสุด') return b.date.compareTo(a.date);
+            if (_sortOrder == 'เก่าสุด') return a.date.compareTo(b.date);
+            if (_sortOrder == 'ยอดสูงสุด') return b.amount.compareTo(a.amount);
+            if (_sortOrder == 'ยอดต่ำสุด') return a.amount.compareTo(b.amount);
+            return 0;
+          });
+
           return Column(
             children: [
               const SizedBox(height: 24),
-              if (transactions.isEmpty)
+              if (allTransactions.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(32.0),
                   child: Text(
@@ -437,7 +451,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           centerSpaceRadius: 40,
                           sections: () {
                             Map<String, double> categoryTotals = {};
-                            for (var tx in transactions) {
+                            for (var tx in allTransactions) {
+                              // กราฟยังคงใช้ข้อมูลรวมทั้งหมด
                               categoryTotals[tx.category] =
                                   (categoryTotals[tx.category] ?? 0.0) +
                                       tx.amount;
@@ -454,7 +469,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               final percentage = totalSum > 0
                                   ? (amount / totalSum * 100)
                                   : 0.0;
-                              // ดึงสีที่ตรงกับหมวดหมู่
                               final color =
                                   _categoryColors[category] ?? Colors.blueGrey;
 
@@ -510,177 +524,264 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
-              const Divider(height: 32),
+              const Divider(height: 24),
+              // ส่วนควบคุม Filter และ Sort
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'รายการย้อนหลัง',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Row(
+                      children: [
+                        // Dropdown แยกรับ-จ่าย
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primaryContainer
+                                .withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _filterType,
+                              isDense: true,
+                              icon: const Icon(Icons.filter_list, size: 16),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              items: ['ทั้งหมด', 'รายรับ', 'รายจ่าย']
+                                  .map((String val) {
+                                return DropdownMenuItem(
+                                    value: val, child: Text(val));
+                              }).toList(),
+                              onChanged: (val) =>
+                                  setState(() => _filterType = val!),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Dropdown จัดเรียง
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .secondaryContainer
+                                .withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _sortOrder,
+                              isDense: true,
+                              icon: const Icon(Icons.sort, size: 16),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              items: [
+                                'ใหม่ล่าสุด',
+                                'เก่าสุด',
+                                'ยอดสูงสุด',
+                                'ยอดต่ำสุด'
+                              ].map((String val) {
+                                return DropdownMenuItem(
+                                    value: val, child: Text(val));
+                              }).toList(),
+                              onChanged: (val) =>
+                                  setState(() => _sortOrder = val!),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'รายการย้อนหลัง (ปัดซ้ายเพื่อลบ)',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    '(ปัดซ้ายที่รายการเพื่อลบ)',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
               Expanded(
-                child: ListView.builder(
-                  itemCount: transactions.length,
-                  itemBuilder: (context, index) {
-                    final tx = transactions[index];
-                    final formattedAmount =
-                        NumberFormat('#,##0.00').format(tx.amount);
-                    final formattedDate =
-                        DateFormat('dd/MM/yyyy HH:mm').format(tx.date);
-                    final categoryColor =
-                        _categoryColors[tx.category] ?? Colors.blueGrey;
+                child: displayTransactions.isEmpty
+                    ? const Center(
+                        child: Text('ไม่มีรายการที่ตรงกับเงื่อนไข',
+                            style: TextStyle(color: Colors.grey)))
+                    : ListView.builder(
+                        itemCount: displayTransactions.length,
+                        itemBuilder: (context, index) {
+                          // ใช้ข้อมูลจาก displayTransactions ที่ผ่านการกรองแล้ว
+                          final tx = displayTransactions[index];
+                          final formattedAmount =
+                              NumberFormat('#,##0.00').format(tx.amount);
+                          final formattedDate =
+                              DateFormat('dd/MM/yyyy HH:mm').format(tx.date);
+                          final categoryColor =
+                              _categoryColors[tx.category] ?? Colors.blueGrey;
 
-                    return Dismissible(
-                      key: ValueKey(tx.id),
-                      background: Container(
-                        color: Colors.red,
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Icon(Icons.delete, color: Colors.white),
-                            SizedBox(width: 8),
-                            Text(
-                              'ลบ',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                          return Dismissible(
+                            key: ValueKey(tx.id),
+                            background: Container(
+                              color: Colors.red,
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 20),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Icon(Icons.delete, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'ลบ',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      direction: DismissDirection.endToStart,
-                      onDismissed: (direction) {
-                        final deletedTx = tx;
+                            direction: DismissDirection.endToStart,
+                            onDismissed: (direction) {
+                              final deletedTx = tx;
 
-                        // ซ่อนรายการออกจากหน้าจอทันทีเพื่อรองรับ Dismissible
-                        setState(() {
-                          _pendingDeleteIds.add(deletedTx.id);
-                        });
+                              setState(() {
+                                _pendingDeleteIds.add(deletedTx.id);
+                              });
 
-                        bool isUndone = false;
-                        ScaffoldMessenger.of(context).clearSnackBars();
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(
-                              SnackBar(
-                                // 1. ตั้งค่าให้เป็นกล่องลอย
-                                behavior: SnackBarBehavior.floating,
-                                // 2. กำหนดระยะห่างจากขอบจอ
-                                margin: const EdgeInsets.only(
-                                    bottom: 24, left: 16, right: 16),
-                                // 3. สีพื้นหลังดำ โปร่งใส 75% (0.75)
-                                backgroundColor: Colors.black.withOpacity(0.75),
-                                // 4. ทำขอบให้มนสวยงาม
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                              bool isUndone = false;
+                              ScaffoldMessenger.of(context).clearSnackBars();
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(
+                                    SnackBar(
+                                      behavior: SnackBarBehavior.floating,
+                                      margin: const EdgeInsets.only(
+                                          bottom: 24, left: 16, right: 16),
+                                      backgroundColor:
+                                          Colors.black.withOpacity(0.75),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      duration: const Duration(seconds: 3),
+                                      content: Row(
+                                        children: [
+                                          const Icon(Icons.info_outline,
+                                              color: Colors.white, size: 20),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              'ลบ "${deletedTx.title}" แล้ว',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      action: SnackBarAction(
+                                        label: 'เลิกทำ',
+                                        textColor: Colors.amberAccent,
+                                        onPressed: () {
+                                          isUndone = true;
+                                          setState(() {
+                                            _pendingDeleteIds
+                                                .remove(deletedTx.id);
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  )
+                                  .closed
+                                  .then((reason) {
+                                if (!isUndone &&
+                                    reason != SnackBarClosedReason.action) {
+                                  _transactionsCollection
+                                      .doc(deletedTx.id)
+                                      .delete();
+                                  _pendingDeleteIds.remove(deletedTx.id);
+                                }
+                              });
+                            },
+                            child: InkWell(
+                              onTap: () => _showEditDialog(tx),
+                              child: Card(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
                                 ),
-                                duration: const Duration(seconds: 3),
-                                content: Row(
-                                  children: [
-                                    const Icon(Icons.info_outline,
-                                        color: Colors.white, size: 20),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        'ลบ "${deletedTx.title}" แล้ว',
-                                        style: const TextStyle(
-                                          color: Colors
-                                              .white, // ตัวอักษรสีขาวให้อ่านง่าย
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
+                                child: ListTile(
+                                  leading: Tooltip(
+                                    message: 'แตะเพื่อเปลี่ยนสีหมวดหมู่',
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(20),
+                                      onTap: () =>
+                                          _showColorPickerDialog(tx.category),
+                                      child: CircleAvatar(
+                                        backgroundColor:
+                                            categoryColor.withOpacity(0.2),
+                                        child: Icon(
+                                          _categoryIcons[tx.category] ??
+                                              Icons.category,
+                                          color: categoryColor,
                                         ),
                                       ),
                                     ),
-                                  ],
-                                ),
-                                action: SnackBarAction(
-                                  label: 'เลิกทำ',
-                                  textColor: Colors
-                                      .amberAccent, // สีปุ่มกดให้ตัดกับพื้นดำชัดๆ
-                                  onPressed: () {
-                                    isUndone = true;
-                                    setState(() {
-                                      _pendingDeleteIds.remove(deletedTx.id);
-                                    });
-                                  },
-                                ),
-                              ),
-                            )
-                            .closed
-                            .then((reason) {
-                          // หากไม่มีการกด Undo หลังครบ 3 วินาที จึงลบออกจาก Firestore
-                          if (!isUndone &&
-                              reason != SnackBarClosedReason.action) {
-                            _transactionsCollection.doc(deletedTx.id).delete();
-                            _pendingDeleteIds.remove(deletedTx.id);
-                          }
-                        });
-                      },
-                      child: InkWell(
-                        onTap: () => _showEditDialog(tx),
-                        child: Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          child: ListTile(
-                            leading: Tooltip(
-                              message: 'แตะเพื่อเปลี่ยนสีหมวดหมู่',
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(20),
-                                onTap: () =>
-                                    _showColorPickerDialog(tx.category),
-                                child: CircleAvatar(
-                                  backgroundColor:
-                                      categoryColor.withOpacity(0.2),
-                                  child: Icon(
-                                    _categoryIcons[tx.category] ??
-                                        Icons.category,
-                                    color: categoryColor,
                                   ),
-                                ),
-                              ),
-                            ),
-                            title: Text(
-                              tx.title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(formattedDate),
-                                if (tx.updatedAt != null)
-                                  Text(
-                                    '(แก้ไขล่าสุด: ${DateFormat('dd/MM/yyyy HH:mm').format(tx.updatedAt!)})',
+                                  title: Text(
+                                    tx.title,
                                     style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                              ],
-                            ),
-                            trailing: Text(
-                              '${tx.isExpense ? '-' : '+'}$formattedAmount ฿',
-                              style: TextStyle(
-                                color: tx.isExpense ? Colors.red : Colors.green,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(formattedDate),
+                                      if (tx.updatedAt != null)
+                                        Text(
+                                          '(แก้ไขล่าสุด: ${DateFormat('dd/MM/yyyy HH:mm').format(tx.updatedAt!)})',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.orange,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  trailing: Text(
+                                    '${tx.isExpense ? '-' : '+'}$formattedAmount ฿',
+                                    style: TextStyle(
+                                      color: tx.isExpense
+                                          ? Colors.red
+                                          : Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
               ),
             ],
           );
