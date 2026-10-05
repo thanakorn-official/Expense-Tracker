@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'screens/dashboard_screen.dart';
+import 'screens/splash_screen.dart'; // เปลี่ยนเป็น import หน้า splash_screen
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
 final ValueNotifier<String> languageNotifier = ValueNotifier('th');
@@ -41,7 +41,7 @@ class ExpenseTrackerApp extends StatelessWidget {
                 useMaterial3: true,
               ),
               themeMode: currentMode,
-              home: const DashboardScreen(),
+              home: const SplashScreen(),
             );
           },
         );
