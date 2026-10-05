@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../main.dart';
 import '../models/transaction_model.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -416,6 +417,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('บันทึกรายรับ-รายจ่าย'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: themeNotifier,
+            builder: (context, currentMode, child) {
+              IconData icon;
+              String tooltip;
+
+              if (currentMode == ThemeMode.system) {
+                icon = Icons.brightness_auto;
+                tooltip = 'ธีมระบบ';
+              } else if (currentMode == ThemeMode.light) {
+                icon = Icons.light_mode;
+                tooltip = 'ธีมสว่าง';
+              } else {
+                icon = Icons.dark_mode;
+                tooltip = 'ธีมมืด';
+              }
+
+              return IconButton(
+                icon: Icon(icon),
+                tooltip: tooltip,
+                onPressed: () {
+                  // สลับสถานะวนลูป: ระบบ -> สว่าง -> มืด -> ระบบ
+                  if (currentMode == ThemeMode.system) {
+                    themeNotifier.value = ThemeMode.light;
+                  } else if (currentMode == ThemeMode.light) {
+                    themeNotifier.value = ThemeMode.dark;
+                  } else {
+                    themeNotifier.value = ThemeMode.system;
+                  }
+                },
+              );
+            },
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _transactionsCollection
