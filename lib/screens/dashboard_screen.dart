@@ -23,8 +23,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   };
 
   // อ้างอิงไปยัง Collection ชื่อ 'transactions' บน Firestore
-  final CollectionReference _transactionsCollection = FirebaseFirestore.instance
-      .collection('transactions');
+  final CollectionReference _transactionsCollection =
+      FirebaseFirestore.instance.collection('transactions');
 
   Widget _buildSummaryItem(String title, double amount, Color color) {
     return Column(
@@ -228,8 +228,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       onPressed: () {
                         if (titleController.text.isEmpty ||
-                            amountController.text.isEmpty)
+                            amountController.text.isEmpty) {
                           return;
+                        }
 
                         // ส่งข้อมูลรายการใหม่ขึ้น Firestore
                         _transactionsCollection.add({
@@ -300,7 +301,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return Column(
             children: [
               const SizedBox(height: 24),
-              if (totalIncome == 0 && totalExpense == 0)
+              if (transactions.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(32.0),
                   child: Text(
@@ -309,44 +310,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 )
               else
-                SizedBox(
-                  height: 180,
-                  child: PieChart(
-                    PieChartData(
-                      sectionsSpace: 2,
-                      centerSpaceRadius: 40,
-                      sections: [
-                        if (totalIncome > 0)
-                          PieChartSectionData(
-                            color: Colors.green,
-                            value: totalIncome,
-                            title:
-                                'รายรับ\n${(totalIncome / (totalIncome + totalExpense) * 100).toStringAsFixed(0)}%',
-                            radius: 50,
-                            titleStyle: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        if (totalExpense > 0)
-                          PieChartSectionData(
-                            color: Colors.redAccent,
-                            value: totalExpense,
-                            title:
-                                'รายจ่าย\n${(totalExpense / (totalIncome + totalExpense) * 100).toStringAsFixed(0)}%',
-                            radius: 50,
-                            titleStyle: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                      ],
+                Column(
+                  children: [
+                    SizedBox(
+                      height: 200, // เพิ่มความสูงให้กราฟมีพื้นที่แสดงไอคอน
+                      child: PieChart(
+                        PieChartData(
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 40,
+                          sections: () {
+                            Map<String, double> categoryTotals = {};
+                            for (var tx in transactions) {
+                              categoryTotals[tx.category] =
+                                  (categoryTotals[tx.category] ?? 0.0) +
+                                      tx.amount;
+                            }
+
+                            double totalSum = categoryTotals.values.fold(
+                              0.0,
+                              (a, b) => a + b,
+                            );
+
+                            final List<Color> colors = [
+                              Colors.blue,
+                              Colors.orange,
+                              Colors.purple,
+                              Colors.green,
+                              Colors.redAccent,
+                              Colors.teal,
+                            ];
+
+                            int i = 0;
+                            return categoryTotals.entries.map((entry) {
+                              final category = entry.key; // ดึงชื่อหมวดหมู่
+                              final amount = entry.value;
+                              final percentage = totalSum > 0
+                                  ? (amount / totalSum * 100)
+                                  : 0.0;
+                              final color = colors[i++ % colors.length];
+
+                              return PieChartSectionData(
+                                color: color,
+                                value: amount,
+                                title:
+                                    '', // ซ่อน title เดิม เพราะจะใช้ badgeWidget แทน
+                                radius:
+                                    65, // ขยายความกว้างของเส้นกราฟเพื่อใส่ไอคอน
+                                badgeWidget: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      _categoryIcons[category] ??
+                                          Icons.category,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${percentage.toStringAsFixed(0)}%',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                badgePositionPercentageOffset:
+                                    0.5, // จัดให้อยู่กึ่งกลาง
+                              );
+                            }).toList();
+                          }(),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                  ],
                 ),
-              const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -380,10 +421,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   itemCount: transactions.length,
                   itemBuilder: (context, index) {
                     final tx = transactions[index];
-                    final formattedAmount = NumberFormat('#,##0.00')
-                        .format(tx.amount);
-                    final formattedDate = DateFormat('dd/MM/yyyy HH:mm')
-                        .format(tx.date);
+                    final formattedAmount =
+                        NumberFormat('#,##0.00').format(tx.amount);
+                    final formattedDate =
+                        DateFormat('dd/MM/yyyy HH:mm').format(tx.date);
 
                     return Dismissible(
                       key: ValueKey(tx.id),
