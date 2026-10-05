@@ -16,6 +16,7 @@ dependencies:
   firebase_core: any
   cloud_firestore: any
   flutter_native_splash: any
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
