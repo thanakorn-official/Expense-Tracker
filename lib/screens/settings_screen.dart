@@ -82,7 +82,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     applicationName: T.get('appTitle'),
                     applicationVersion: T.get('app_version'),
-                    applicationLegalese: '© 2026 Expense Tracker App',
+                    applicationLegalese: '©Espresso',
                     children: [
                       const SizedBox(height: 16),
                       Text(T.get('about_desc')),
