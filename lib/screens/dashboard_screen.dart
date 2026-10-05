@@ -562,32 +562,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               final color =
                                   _categoryColors[category] ?? Colors.blueGrey;
 
+                              // เช็คว่าพื้นที่เปอร์เซ็นต์มากพอที่จะแสดงไอคอนหรือไม่ (ปรับตัวเลข 6.0 ได้ตามต้องการ)
+                              final bool showIcon = percentage >= 6.0;
+
                               return PieChartSectionData(
                                 color: color,
                                 value: amount,
                                 title: '',
                                 radius: 65,
-                                badgeWidget: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      _categoryIcons[category] ??
-                                          Icons.category,
-                                      color: Colors.white,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${percentage.toStringAsFixed(0)}%',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                badgeWidget: showIcon
+                                    ? Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            _categoryIcons[category] ??
+                                                Icons.category,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${percentage.toStringAsFixed(0)}%',
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : const SizedBox
+                                        .shrink(), // แสดงพื้นที่ว่างถ้าเปอร์เซ็นต์น้อยเกินไป
                                 badgePositionPercentageOffset: 0.5,
                               );
                             }).toList();
