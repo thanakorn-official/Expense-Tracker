@@ -26,6 +26,7 @@ class T {
       'expense': 'รายจ่าย',
       'all': 'ทั้งหมด',
       'daily': 'รายวัน',
+      'weekly': 'รายสัปดาห์',
       'monthly': 'รายเดือน',
       'yearly': 'รายปี',
       'none': 'ไม่จัดกลุ่ม',
@@ -33,6 +34,12 @@ class T {
       'oldest': 'เก่าสุด',
       'highest': 'ยอดสูงสุด',
       'lowest': 'ยอดต่ำสุด',
+      // --- คำนำหน้าการจัดกลุ่ม ---
+      'date_prefix': 'วันที่',
+      'week_prefix': 'สัปดาห์ที่',
+      'month_prefix': 'เดือน',
+      'year_prefix': 'ปี',
+      // ------------------------
       'อาหาร': 'อาหาร',
       'เดินทาง': 'เดินทาง',
       'ช้อปปิ้ง': 'ช้อปปิ้ง',
@@ -78,6 +85,7 @@ class T {
       'expense': 'Expense',
       'all': 'All',
       'daily': 'Daily',
+      'weekly': 'Weekly',
       'monthly': 'Monthly',
       'yearly': 'Yearly',
       'none': 'Ungrouped',
@@ -85,6 +93,12 @@ class T {
       'oldest': 'Oldest',
       'highest': 'Highest',
       'lowest': 'Lowest',
+      // --- Grouping Prefixes ---
+      'date_prefix': 'Date:',
+      'week_prefix': 'Week:',
+      'month_prefix': 'Month:',
+      'year_prefix': 'Year:',
+      // -------------------------
       'อาหาร': 'Food',
       'เดินทาง': 'Transport',
       'ช้อปปิ้ง': 'Shopping',

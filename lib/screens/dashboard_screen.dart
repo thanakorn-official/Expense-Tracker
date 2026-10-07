@@ -486,27 +486,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Map<String, List<TransactionModel>> tempMap = {};
                   for (var tx in displayTransactions) {
                     String key;
-                    if (_groupType == 'daily')
+                    if (_groupType == 'daily') {
                       key = DateFormat('dd/MM/yyyy').format(tx.date);
-                    else if (_groupType == 'monthly')
+                    } else if (_groupType == 'weekly') {
+                      // หาวันจันทร์ของสัปดาห์นั้นเพื่อใช้เป็น Key
+                      DateTime startOfWeek =
+                          tx.date.subtract(Duration(days: tx.date.weekday - 1));
+                      key = DateFormat('dd/MM/yyyy').format(startOfWeek);
+                    } else if (_groupType == 'monthly') {
                       key = DateFormat('MM/yyyy').format(tx.date);
-                    else
+                    } else {
                       key = DateFormat('yyyy').format(tx.date);
+                    }
                     tempMap.putIfAbsent(key, () => []).add(tx);
                   }
 
                   List<String> sortedKeys = tempMap.keys.toList();
                   sortedKeys.sort((a, b) {
-                    if (_groupType == 'daily')
+                    if (_groupType == 'daily' || _groupType == 'weekly') {
                       return DateFormat('dd/MM/yyyy')
                           .parse(b)
                           .compareTo(DateFormat('dd/MM/yyyy').parse(a));
-                    else if (_groupType == 'monthly')
+                    } else if (_groupType == 'monthly') {
                       return DateFormat('MM/yyyy')
                           .parse(b)
                           .compareTo(DateFormat('MM/yyyy').parse(a));
-                    else
+                    } else {
                       return int.parse(b).compareTo(int.parse(a));
+                    }
                   });
 
                   if (_sortOrder == 'oldest')
@@ -514,15 +521,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   for (var key in sortedKeys) {
                     String displayHeader = key;
-                    if (_groupType == 'daily')
+                    if (_groupType == 'daily') {
                       displayHeader =
-                          '${languageNotifier.value == 'th' ? 'ประจำวันที่' : 'Date:'} $key';
-                    else if (_groupType == 'monthly')
+                          '${languageNotifier.value == 'th' ? 'วันที่' : 'Date:'} $key';
+                    } else if (_groupType == 'weekly') {
+                      DateTime start = DateFormat('dd/MM/yyyy').parse(key);
+                      DateTime end = start.add(const Duration(days: 6));
+                      String endStr = DateFormat('dd/MM/yyyy').format(end);
                       displayHeader =
-                          '${languageNotifier.value == 'th' ? 'ประจำเดือน' : 'Month:'} $key';
-                    else
+                          '${languageNotifier.value == 'th' ? 'สัปดาห์ที่' : 'Week:'} $key - $endStr';
+                    } else if (_groupType == 'monthly') {
                       displayHeader =
-                          '${languageNotifier.value == 'th' ? 'ประจำปี' : 'Year:'} $key';
+                          '${languageNotifier.value == 'th' ? 'เดือน' : 'Month:'} $key';
+                    } else {
+                      displayHeader =
+                          '${languageNotifier.value == 'th' ? 'ปี' : 'Year:'} $key';
+                    }
 
                     listItems.add(displayHeader);
                     listItems.addAll(tempMap[key]!);
@@ -641,9 +655,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Row(
                             children: [
+                              // เพิ่ม 'weekly' เข้าไปใน array นี้
                               _buildDropdown(
                                   _groupType,
-                                  ['daily', 'monthly', 'yearly', 'none'],
+                                  [
+                                    'daily',
+                                    'weekly',
+                                    'monthly',
+                                    'yearly',
+                                    'none'
+                                  ],
                                   Icons.date_range,
                                   (val) => setState(() => _groupType = val!)),
                               _buildDropdown(
