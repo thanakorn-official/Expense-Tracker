@@ -49,14 +49,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final Set<String> _pendingDeleteIds = {};
 
+  final CollectionReference _transactionsCollection =
+      FirebaseFirestore.instance.collection('transactions');
+
   String _groupType = 'daily';
   String _filterType = 'all';
   String _sortOrder = 'newest';
 
-  final CollectionReference _transactionsCollection =
-      FirebaseFirestore.instance.collection('transactions');
+  // ดึงสีของหมวดหมู่
+  Color _colorOf(String category) =>
+      _categoryColors[category] ?? Colors.blueGrey;
 
-  // ฟังก์ชันสร้างวิดเจ็ตแสดงยอดสรุป
+  // ดึงไอคอนของหมวดหมู่
+  IconData _iconOf(String category) =>
+      _categoryIcons[category] ?? Icons.category;
+
+  // สร้างวิดเจ็ตแสดงยอดสรุป
   Widget _buildSummaryItem(String title, double amount, Color color) {
     return Column(
       children: [
@@ -74,7 +82,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ฟังก์ชันสร้างวิดเจ็ต Dropdown สำหรับตัวกรอง
+  // สร้างแถวสรุปรายรับ คงเหลือ รายจ่าย
+  Widget _buildSummaryRow(double income, double expense) {
+    final balance = income - expense;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildSummaryItem(T.get('totalIncome'), income, Colors.green),
+        _buildSummaryItem(
+            T.get('balance'), balance, balance >= 0 ? Colors.blue : Colors.red),
+        _buildSummaryItem(T.get('totalExpense'), expense, Colors.redAccent),
+      ],
+    );
+  }
+
+  // สร้างวิดเจ็ต Dropdown สำหรับตัวกรอง
   Widget _buildDropdown(String value, List<String> items, IconData icon,
       ValueChanged<String?> onChanged) {
     return Container(
@@ -97,18 +119,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
-          items: items.map((String val) {
-            return DropdownMenuItem(value: val, child: Text(T.get(val)));
-          }).toList(),
+          items: items
+              .map((val) =>
+                  DropdownMenuItem(value: val, child: Text(T.get(val))))
+              .toList(),
           onChanged: onChanged,
         ),
       ),
     );
   }
 
-  // ฟังก์ชันแสดงหน้าต่างเลือกสีหมวดหมู่
-  void _showColorPickerDialog(String category) {
-    showDialog(
+  // สร้างแถบตัวกรองและการจัดเรียง
+  Widget _buildFilterBar() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        children: [
+          _buildDropdown(
+            _groupType,
+            ['daily', 'weekly', 'monthly', 'yearly', 'none'],
+            Icons.date_range,
+            (val) => setState(() => _groupType = val!),
+          ),
+          _buildDropdown(
+            _filterType,
+            ['all', 'income', 'expense'],
+            Icons.filter_list,
+            (val) => setState(() => _filterType = val!),
+          ),
+          _buildDropdown(
+            _sortOrder,
+            ['newest', 'oldest', 'highest', 'lowest'],
+            Icons.sort,
+            (val) => setState(() => _sortOrder = val!),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // สร้างช่องเลือกหมวดหมู่พร้อมปุ่มเปลี่ยนสี
+  Widget _buildCategoryField({
+    required String selected,
+    required ValueChanged<String?> onChanged,
+    required VoidCallback onPickColor,
+    bool outlined = false,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            value: _categoryIcons.containsKey(selected) ? selected : 'อื่นๆ',
+            decoration: InputDecoration(
+              labelText: T.get('categoryLabel'),
+              border: outlined ? const OutlineInputBorder() : null,
+            ),
+            items: _categoryIcons.keys.map((category) {
+              return DropdownMenuItem<String>(
+                value: category,
+                child: Row(
+                  children: [
+                    Icon(_iconOf(category),
+                        color: _colorOf(category), size: 20),
+                    const SizedBox(width: 8),
+                    Text(T.get(category)),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: onChanged,
+          ),
+        ),
+        IconButton(
+          tooltip: T.get('changeColor'),
+          icon: Icon(Icons.palette, color: _colorOf(selected)),
+          onPressed: onPickColor,
+        ),
+      ],
+    );
+  }
+
+  // แสดงหน้าต่างเลือกสีหมวดหมู่
+  Future<void> _showColorPickerDialog(String category) {
+    return showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('${T.get('changeColor')} "${T.get(category)}"'),
@@ -128,9 +222,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 final isSelected = _categoryColors[category] == color;
                 return GestureDetector(
                   onTap: () {
-                    setState(() {
-                      _categoryColors[category] = color;
-                    });
+                    setState(() => _categoryColors[category] = color);
                     Navigator.pop(ctx);
                   },
                   child: Container(
@@ -144,8 +236,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           : null,
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 4),
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                        ),
                       ],
                     ),
                     child: isSelected
@@ -167,7 +260,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ฟังก์ชันแสดงหน้าต่างแก้ไขรายการ
+  // แสดงหน้าต่างแก้ไขรายการ
   void _showEditDialog(TransactionModel tx) {
     final titleController = TextEditingController(text: tx.title);
     final amountController = TextEditingController(text: tx.amount.toString());
@@ -177,8 +270,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setStateDialog) {
-          final currentColor =
-              _categoryColors[selectedCategory] ?? Colors.blueGrey;
           return AlertDialog(
             title: Text(T.get('edit')),
             content: Column(
@@ -195,41 +286,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: _categoryIcons.containsKey(selectedCategory)
-                            ? selectedCategory
-                            : 'อื่นๆ',
-                        decoration:
-                            InputDecoration(labelText: T.get('categoryLabel')),
-                        items: _categoryIcons.keys.map((String category) {
-                          final catColor =
-                              _categoryColors[category] ?? Colors.blueGrey;
-                          return DropdownMenuItem<String>(
-                            value: category,
-                            child: Row(
-                              children: [
-                                Icon(_categoryIcons[category],
-                                    color: catColor, size: 20),
-                                const SizedBox(width: 8),
-                                Text(T.get(category)),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          setStateDialog(() => selectedCategory = newValue!);
-                        },
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: T.get('changeColor'),
-                      icon: Icon(Icons.palette, color: currentColor),
-                      onPressed: () => _showColorPickerDialog(selectedCategory),
-                    ),
-                  ],
+                _buildCategoryField(
+                  selected: selectedCategory,
+                  onChanged: (val) =>
+                      setStateDialog(() => selectedCategory = val!),
+                  onPickColor: () async {
+                    await _showColorPickerDialog(selectedCategory);
+                    setStateDialog(() {});
+                  },
                 ),
               ],
             ),
@@ -258,7 +322,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ฟังก์ชันแสดงหน้าต่างเพิ่มรายการใหม่ (Bottom Sheet)
+  // แสดงหน้าต่างเพิ่มรายการใหม่
   void _showAddTransactionSheet(BuildContext context) {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
@@ -274,8 +338,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
-            final currentColor =
-                _categoryColors[selectedCategory] ?? Colors.blueGrey;
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx).viewInsets.bottom,
@@ -309,42 +371,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     keyboardType: TextInputType.number,
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: selectedCategory,
-                          decoration: InputDecoration(
-                            labelText: T.get('categoryLabel'),
-                            border: const OutlineInputBorder(),
-                          ),
-                          items: _categoryIcons.keys.map((String category) {
-                            final catColor =
-                                _categoryColors[category] ?? Colors.blueGrey;
-                            return DropdownMenuItem<String>(
-                              value: category,
-                              child: Row(
-                                children: [
-                                  Icon(_categoryIcons[category],
-                                      color: catColor, size: 20),
-                                  const SizedBox(width: 8),
-                                  Text(T.get(category)),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (newValue) {
-                            setModalState(() => selectedCategory = newValue!);
-                          },
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: T.get('changeColor'),
-                        icon: Icon(Icons.palette, color: currentColor),
-                        onPressed: () =>
-                            _showColorPickerDialog(selectedCategory),
-                      ),
-                    ],
+                  _buildCategoryField(
+                    selected: selectedCategory,
+                    outlined: true,
+                    onChanged: (val) =>
+                        setModalState(() => selectedCategory = val!),
+                    onPickColor: () async {
+                      await _showColorPickerDialog(selectedCategory);
+                      setModalState(() {});
+                    },
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -356,14 +391,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         label: Text(T.get('expense')),
                         selected: isExpense,
                         selectedColor: Colors.redAccent.withOpacity(0.3),
-                        onSelected: (val) =>
+                        onSelected: (_) =>
                             setModalState(() => isExpense = true),
                       ),
                       ChoiceChip(
                         label: Text(T.get('income')),
                         selected: !isExpense,
                         selectedColor: Colors.green.withOpacity(0.3),
-                        onSelected: (val) =>
+                        onSelected: (_) =>
                             setModalState(() => isExpense = false),
                       ),
                     ],
@@ -406,7 +441,365 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ฟังก์ชันสร้างหน้าจอหลัก (Build)
+  // กรองและเรียงลำดับรายการ
+  List<TransactionModel> _filterAndSort(List<TransactionModel> transactions) {
+    final result = transactions.where((tx) {
+      if (_filterType == 'income') return !tx.isExpense;
+      if (_filterType == 'expense') return tx.isExpense;
+      return true;
+    }).toList();
+
+    result.sort((a, b) {
+      switch (_sortOrder) {
+        case 'newest':
+          return b.date.compareTo(a.date);
+        case 'oldest':
+          return a.date.compareTo(b.date);
+        case 'highest':
+          return b.amount.compareTo(a.amount);
+        case 'lowest':
+          return a.amount.compareTo(b.amount);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }
+
+  // สร้างคีย์สำหรับจัดกลุ่มรายการ
+  String _groupKey(TransactionModel tx) {
+    switch (_groupType) {
+      case 'daily':
+        return DateFormat('dd/MM/yyyy').format(tx.date);
+      case 'weekly':
+        final startOfWeek =
+            tx.date.subtract(Duration(days: tx.date.weekday - 1));
+        return DateFormat('dd/MM/yyyy').format(startOfWeek);
+      case 'monthly':
+        return DateFormat('MM/yyyy').format(tx.date);
+      default:
+        return DateFormat('yyyy').format(tx.date);
+    }
+  }
+
+  // เปรียบเทียบคีย์กลุ่มเพื่อเรียงจากใหม่ไปเก่า
+  int _compareGroupKeys(String a, String b) {
+    switch (_groupType) {
+      case 'daily':
+      case 'weekly':
+        final format = DateFormat('dd/MM/yyyy');
+        return format.parse(b).compareTo(format.parse(a));
+      case 'monthly':
+        final format = DateFormat('MM/yyyy');
+        return format.parse(b).compareTo(format.parse(a));
+      default:
+        return int.parse(b).compareTo(int.parse(a));
+    }
+  }
+
+  // สร้างข้อความหัวข้อของกลุ่ม
+  String _groupHeader(String key) {
+    switch (_groupType) {
+      case 'daily':
+        return '${T.get('date_prefix')} $key';
+      case 'weekly':
+        final start = DateFormat('dd/MM/yyyy').parse(key);
+        final end = start.add(const Duration(days: 6));
+        final endStr = DateFormat('dd/MM/yyyy').format(end);
+        return '${T.get('week_prefix')} $key - $endStr';
+      case 'monthly':
+        return '${T.get('month_prefix')} $key';
+      default:
+        return '${T.get('year_prefix')} $key';
+    }
+  }
+
+  // สร้างรายการแสดงผลพร้อมหัวข้อกลุ่ม
+  List<dynamic> _buildListItems(List<TransactionModel> transactions) {
+    if (_groupType == 'none' || transactions.isEmpty) return transactions;
+
+    final Map<String, List<TransactionModel>> grouped = {};
+    for (final tx in transactions) {
+      grouped.putIfAbsent(_groupKey(tx), () => []).add(tx);
+    }
+
+    var sortedKeys = grouped.keys.toList()..sort(_compareGroupKeys);
+    if (_sortOrder == 'oldest') {
+      sortedKeys = sortedKeys.reversed.toList();
+    }
+
+    final List<dynamic> items = [];
+    for (final key in sortedKeys) {
+      items.add(_groupHeader(key));
+      items.addAll(grouped[key]!);
+    }
+    return items;
+  }
+
+  // สร้างกราฟวงกลมแสดงสัดส่วนหมวดหมู่
+  Widget _buildPieChart(List<TransactionModel> transactions) {
+    final Map<String, double> categoryTotals = {};
+    for (final tx in transactions) {
+      categoryTotals[tx.category] =
+          (categoryTotals[tx.category] ?? 0.0) + tx.amount;
+    }
+    final totalSum = categoryTotals.values.fold(0.0, (a, b) => a + b);
+
+    final sections = categoryTotals.entries.map((entry) {
+      final percentage = totalSum > 0 ? (entry.value / totalSum * 100) : 0.0;
+
+      return PieChartSectionData(
+        color: _colorOf(entry.key),
+        value: entry.value,
+        title: '',
+        radius: 65,
+        badgeWidget: percentage >= 6.0
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(_iconOf(entry.key), color: Colors.white, size: 18),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${percentage.toStringAsFixed(0)}%',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              )
+            : const SizedBox.shrink(),
+        badgePositionPercentageOffset: 0.5,
+      );
+    }).toList();
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 200,
+          child: PieChart(
+            PieChartData(
+              sectionsSpace: 2,
+              centerSpaceRadius: 40,
+              sections: sections,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  // สร้างหัวข้อกลุ่มในรายการ
+  Widget _buildGroupHeaderWidget(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 24, right: 16, top: 16, bottom: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
+    );
+  }
+
+  // จัดการการลบรายการพร้อมปุ่มเลิกทำ
+  void _handleDelete(BuildContext context, TransactionModel tx) {
+    setState(() => _pendingDeleteIds.add(tx.id));
+    bool isUndone = false;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger
+        .showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
+            backgroundColor: Colors.black.withOpacity(0.75),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 3),
+            content: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${T.get('deleted')} ${tx.title}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            action: SnackBarAction(
+              label: T.get('undo'),
+              textColor: Colors.amberAccent,
+              onPressed: () {
+                isUndone = true;
+                setState(() => _pendingDeleteIds.remove(tx.id));
+              },
+            ),
+          ),
+        )
+        .closed
+        .then((reason) {
+      if (!isUndone && reason != SnackBarClosedReason.action) {
+        _transactionsCollection.doc(tx.id).delete();
+        _pendingDeleteIds.remove(tx.id);
+      }
+    });
+  }
+
+  // สร้างรายการธุรกรรมแต่ละรายการ
+  Widget _buildTransactionItem(BuildContext context, TransactionModel tx) {
+    final formattedAmount = NumberFormat('#,##0.00').format(tx.amount);
+    final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(tx.date);
+    final categoryColor = _colorOf(tx.category);
+
+    return Dismissible(
+      key: ValueKey(tx.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            const Icon(Icons.delete, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(
+              T.get('delete'),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+      onDismissed: (_) => _handleDelete(context, tx),
+      child: InkWell(
+        onTap: () => _showEditDialog(tx),
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: ListTile(
+            leading: Tooltip(
+              message: T.get('changeColor'),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => _showColorPickerDialog(tx.category),
+                child: CircleAvatar(
+                  backgroundColor: categoryColor.withOpacity(0.2),
+                  child: Icon(_iconOf(tx.category), color: categoryColor),
+                ),
+              ),
+            ),
+            title: Text(
+              tx.title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(formattedDate),
+                if (tx.updatedAt != null)
+                  Text(
+                    '(แก้ไขล่าสุด: ${DateFormat('dd/MM/yyyy HH:mm').format(tx.updatedAt!)})',
+                    style: const TextStyle(fontSize: 12, color: Colors.orange),
+                  ),
+              ],
+            ),
+            trailing: Text(
+              '${tx.isExpense ? '-' : '+'}$formattedAmount ฿',
+              style: TextStyle(
+                color: tx.isExpense ? Colors.red : Colors.green,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // สร้างรายการประวัติธุรกรรมทั้งหมด
+  Widget _buildTransactionList(List<dynamic> listItems) {
+    if (listItems.isEmpty) {
+      return Center(
+        child:
+            Text(T.get('noMatch'), style: const TextStyle(color: Colors.grey)),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: listItems.length,
+      itemBuilder: (context, index) {
+        final item = listItems[index];
+        if (item is String) return _buildGroupHeaderWidget(item);
+        return _buildTransactionItem(context, item as TransactionModel);
+      },
+    );
+  }
+
+  // สร้างส่วนเนื้อหาหลักจากข้อมูลธุรกรรม
+  Widget _buildContent(List<TransactionModel> allTransactions) {
+    final totalIncome = allTransactions
+        .where((tx) => !tx.isExpense)
+        .fold(0.0, (sum, tx) => sum + tx.amount);
+    final totalExpense = allTransactions
+        .where((tx) => tx.isExpense)
+        .fold(0.0, (sum, tx) => sum + tx.amount);
+
+    final listItems = _buildListItems(_filterAndSort(allTransactions));
+
+    return Column(
+      children: [
+        const SizedBox(height: 24),
+        if (allTransactions.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Text(T.get('noData'),
+                style: const TextStyle(color: Colors.grey)),
+          )
+        else
+          _buildPieChart(allTransactions),
+        _buildSummaryRow(totalIncome, totalExpense),
+        const Divider(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                T.get('history'),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                T.get('swipeToDelete'),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildFilterBar(),
+        const SizedBox(height: 8),
+        Expanded(child: _buildTransactionList(listItems)),
+      ],
+    );
+  }
+
+  // สร้างหน้าจอหลัก
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(
@@ -443,423 +836,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
 
-                final List<TransactionModel> allTransactions =
-                    snapshot.data!.docs
-                        .map((doc) {
-                          final data = doc.data() as Map<String, dynamic>;
-                          data['id'] = doc.id;
-                          return TransactionModel.fromMap(data);
-                        })
-                        .where((tx) => !_pendingDeleteIds.contains(tx.id))
-                        .toList();
+                final allTransactions = snapshot.data!.docs
+                    .map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      data['id'] = doc.id;
+                      return TransactionModel.fromMap(data);
+                    })
+                    .where((tx) => !_pendingDeleteIds.contains(tx.id))
+                    .toList();
 
-                double totalIncome = allTransactions
-                    .where((tx) => !tx.isExpense)
-                    .fold(0.0, (sum, item) => sum + item.amount);
-                double totalExpense = allTransactions
-                    .where((tx) => tx.isExpense)
-                    .fold(0.0, (sum, item) => sum + item.amount);
-                double balance = totalIncome - totalExpense;
-
-                List<TransactionModel> displayTransactions =
-                    allTransactions.where((tx) {
-                  if (_filterType == 'income') return !tx.isExpense;
-                  if (_filterType == 'expense') return tx.isExpense;
-                  return true;
-                }).toList();
-
-                displayTransactions.sort((a, b) {
-                  if (_sortOrder == 'newest') return b.date.compareTo(a.date);
-                  if (_sortOrder == 'oldest') return a.date.compareTo(b.date);
-                  if (_sortOrder == 'highest')
-                    return b.amount.compareTo(a.amount);
-                  if (_sortOrder == 'lowest')
-                    return a.amount.compareTo(b.amount);
-                  return 0;
-                });
-
-                List<dynamic> listItems = [];
-
-                if (_groupType == 'none' || displayTransactions.isEmpty) {
-                  listItems = displayTransactions;
-                } else {
-                  Map<String, List<TransactionModel>> tempMap = {};
-                  for (var tx in displayTransactions) {
-                    String key;
-                    if (_groupType == 'daily') {
-                      key = DateFormat('dd/MM/yyyy').format(tx.date);
-                    } else if (_groupType == 'weekly') {
-                      // หาวันจันทร์ของสัปดาห์นั้นเพื่อใช้เป็น Key
-                      DateTime startOfWeek =
-                          tx.date.subtract(Duration(days: tx.date.weekday - 1));
-                      key = DateFormat('dd/MM/yyyy').format(startOfWeek);
-                    } else if (_groupType == 'monthly') {
-                      key = DateFormat('MM/yyyy').format(tx.date);
-                    } else {
-                      key = DateFormat('yyyy').format(tx.date);
-                    }
-                    tempMap.putIfAbsent(key, () => []).add(tx);
-                  }
-
-                  List<String> sortedKeys = tempMap.keys.toList();
-                  sortedKeys.sort((a, b) {
-                    if (_groupType == 'daily' || _groupType == 'weekly') {
-                      return DateFormat('dd/MM/yyyy')
-                          .parse(b)
-                          .compareTo(DateFormat('dd/MM/yyyy').parse(a));
-                    } else if (_groupType == 'monthly') {
-                      return DateFormat('MM/yyyy')
-                          .parse(b)
-                          .compareTo(DateFormat('MM/yyyy').parse(a));
-                    } else {
-                      return int.parse(b).compareTo(int.parse(a));
-                    }
-                  });
-
-                  if (_sortOrder == 'oldest')
-                    sortedKeys = sortedKeys.reversed.toList();
-
-                  for (var key in sortedKeys) {
-                      String displayHeader = key;
-                      if (_groupType == 'daily') {
-                        displayHeader = '${T.get('date_prefix')} $key';
-                      } else if (_groupType == 'weekly') {
-                        DateTime start = DateFormat('dd/MM/yyyy').parse(key);
-                        DateTime end = start.add(const Duration(days: 6));
-                        String endStr = DateFormat('dd/MM/yyyy').format(end);
-                        displayHeader = '${T.get('week_prefix')} $key - $endStr';
-                      } else if (_groupType == 'monthly') {
-                        displayHeader = '${T.get('month_prefix')} $key';
-                      } else {
-                        displayHeader = '${T.get('year_prefix')} $key';
-                      }
-
-                      listItems.add(displayHeader);
-                      listItems.addAll(tempMap[key]!);
-                    }
-
-                return Column(
-                  children: [
-                    const SizedBox(height: 24),
-                    if (allTransactions.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: Text(T.get('noData'),
-                            style: const TextStyle(color: Colors.grey)),
-                      )
-                    else
-                      Column(
-                        children: [
-                          SizedBox(
-                            height: 200,
-                            child: PieChart(
-                              PieChartData(
-                                sectionsSpace: 2,
-                                centerSpaceRadius: 40,
-                                sections: () {
-                                  Map<String, double> categoryTotals = {};
-                                  for (var tx in allTransactions) {
-                                    categoryTotals[tx.category] =
-                                        (categoryTotals[tx.category] ?? 0.0) +
-                                            tx.amount;
-                                  }
-                                  double totalSum = categoryTotals.values
-                                      .fold(0.0, (a, b) => a + b);
-
-                                  return categoryTotals.entries.map((entry) {
-                                    final category = entry.key;
-                                    final amount = entry.value;
-                                    final percentage = totalSum > 0
-                                        ? (amount / totalSum * 100)
-                                        : 0.0;
-                                    final color = _categoryColors[category] ??
-                                        Colors.blueGrey;
-                                    final bool showIcon = percentage >= 6.0;
-
-                                    return PieChartSectionData(
-                                      color: color,
-                                      value: amount,
-                                      title: '',
-                                      radius: 65,
-                                      badgeWidget: showIcon
-                                          ? Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                    _categoryIcons[category] ??
-                                                        Icons.category,
-                                                    color: Colors.white,
-                                                    size: 18),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  '${percentage.toStringAsFixed(0)}%',
-                                                  style: const TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Colors.white),
-                                                ),
-                                              ],
-                                            )
-                                          : const SizedBox.shrink(),
-                                      badgePositionPercentageOffset: 0.5,
-                                    );
-                                  }).toList();
-                                }(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildSummaryItem(
-                            T.get('totalIncome'), totalIncome, Colors.green),
-                        _buildSummaryItem(T.get('balance'), balance,
-                            balance >= 0 ? Colors.blue : Colors.red),
-                        _buildSummaryItem(T.get('totalExpense'), totalExpense,
-                            Colors.redAccent),
-                      ],
-                    ),
-                    const Divider(height: 24),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(T.get('history'),
-                                  style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold)),
-                              Text(T.get('swipeToDelete'),
-                                  style: const TextStyle(
-                                      fontSize: 12, color: Colors.grey)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Row(
-                            children: [
-                              // เพิ่ม 'weekly' เข้าไปใน array นี้
-                              _buildDropdown(
-                                  _groupType,
-                                  [
-                                    'daily',
-                                    'weekly',
-                                    'monthly',
-                                    'yearly',
-                                    'none'
-                                  ],
-                                  Icons.date_range,
-                                  (val) => setState(() => _groupType = val!)),
-                              _buildDropdown(
-                                  _filterType,
-                                  ['all', 'income', 'expense'],
-                                  Icons.filter_list,
-                                  (val) => setState(() => _filterType = val!)),
-                              _buildDropdown(
-                                  _sortOrder,
-                                  ['newest', 'oldest', 'highest', 'lowest'],
-                                  Icons.sort,
-                                  (val) => setState(() => _sortOrder = val!)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: listItems.isEmpty
-                          ? Center(
-                              child: Text(T.get('noMatch'),
-                                  style: const TextStyle(color: Colors.grey)))
-                          : ListView.builder(
-                              itemCount: listItems.length,
-                              itemBuilder: (context, index) {
-                                final item = listItems[index];
-
-                                if (item is String) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(
-                                        left: 24,
-                                        right: 16,
-                                        top: 16,
-                                        bottom: 4),
-                                    child: Text(
-                                      item,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                      ),
-                                    ),
-                                  );
-                                }
-
-                                final tx = item as TransactionModel;
-                                final formattedAmount =
-                                    NumberFormat('#,##0.00').format(tx.amount);
-                                final formattedDate =
-                                    DateFormat('dd/MM/yyyy HH:mm')
-                                        .format(tx.date);
-                                final categoryColor =
-                                    _categoryColors[tx.category] ??
-                                        Colors.blueGrey;
-
-                                return Dismissible(
-                                  key: ValueKey(tx.id),
-                                  background: Container(
-                                    color: Colors.red,
-                                    alignment: Alignment.centerRight,
-                                    padding: const EdgeInsets.only(right: 20),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        const Icon(Icons.delete,
-                                            color: Colors.white),
-                                        const SizedBox(width: 8),
-                                        Text(T.get('delete'),
-                                            style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold)),
-                                      ],
-                                    ),
-                                  ),
-                                  direction: DismissDirection.endToStart,
-                                  onDismissed: (direction) {
-                                    final deletedTx = tx;
-                                    setState(() =>
-                                        _pendingDeleteIds.add(deletedTx.id));
-                                    bool isUndone = false;
-                                    ScaffoldMessenger.of(context)
-                                        .clearSnackBars();
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
-                                          SnackBar(
-                                            behavior: SnackBarBehavior.floating,
-                                            margin: const EdgeInsets.only(
-                                                bottom: 24,
-                                                left: 16,
-                                                right: 16),
-                                            backgroundColor:
-                                                Colors.black.withOpacity(0.75),
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12)),
-                                            duration:
-                                                const Duration(seconds: 3),
-                                            content: Row(
-                                              children: [
-                                                const Icon(Icons.info_outline,
-                                                    color: Colors.white,
-                                                    size: 20),
-                                                const SizedBox(width: 12),
-                                                Expanded(
-                                                  child: Text(
-                                                    '${T.get('deleted')} ${deletedTx.title}',
-                                                    style: const TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 15,
-                                                        fontWeight:
-                                                            FontWeight.w500),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            action: SnackBarAction(
-                                              label: T.get('undo'),
-                                              textColor: Colors.amberAccent,
-                                              onPressed: () {
-                                                isUndone = true;
-                                                setState(() => _pendingDeleteIds
-                                                    .remove(deletedTx.id));
-                                              },
-                                            ),
-                                          ),
-                                        )
-                                        .closed
-                                        .then((reason) {
-                                      if (!isUndone &&
-                                          reason !=
-                                              SnackBarClosedReason.action) {
-                                        _transactionsCollection
-                                            .doc(deletedTx.id)
-                                            .delete();
-                                        _pendingDeleteIds.remove(deletedTx.id);
-                                      }
-                                    });
-                                  },
-                                  child: InkWell(
-                                    onTap: () => _showEditDialog(tx),
-                                    child: Card(
-                                      margin: const EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 6),
-                                      child: ListTile(
-                                        leading: Tooltip(
-                                          message: T.get('changeColor'),
-                                          child: InkWell(
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                            onTap: () => _showColorPickerDialog(
-                                                tx.category),
-                                            child: CircleAvatar(
-                                              backgroundColor: categoryColor
-                                                  .withOpacity(0.2),
-                                              child: Icon(
-                                                  _categoryIcons[tx.category] ??
-                                                      Icons.category,
-                                                  color: categoryColor),
-                                            ),
-                                          ),
-                                        ),
-                                        title: Text(tx.title,
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold)),
-                                        subtitle: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(formattedDate),
-                                            if (tx.updatedAt != null)
-                                              Text(
-                                                '(แก้ไขล่าสุด: ${DateFormat('dd/MM/yyyy HH:mm').format(tx.updatedAt!)})',
-                                                style: const TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.orange),
-                                              ),
-                                          ],
-                                        ),
-                                        trailing: Text(
-                                          '${tx.isExpense ? '-' : '+'}$formattedAmount ฿',
-                                          style: TextStyle(
-                                            color: tx.isExpense
-                                                ? Colors.red
-                                                : Colors.green,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                );
+                return _buildContent(allTransactions);
               },
             ),
           ),
