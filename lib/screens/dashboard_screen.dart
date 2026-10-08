@@ -520,28 +520,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     sortedKeys = sortedKeys.reversed.toList();
 
                   for (var key in sortedKeys) {
-                    String displayHeader = key;
-                    if (_groupType == 'daily') {
-                      displayHeader =
-                          '${languageNotifier.value == 'th' ? 'วันที่' : 'Date:'} $key';
-                    } else if (_groupType == 'weekly') {
-                      DateTime start = DateFormat('dd/MM/yyyy').parse(key);
-                      DateTime end = start.add(const Duration(days: 6));
-                      String endStr = DateFormat('dd/MM/yyyy').format(end);
-                      displayHeader =
-                          '${languageNotifier.value == 'th' ? 'สัปดาห์ที่' : 'Week:'} $key - $endStr';
-                    } else if (_groupType == 'monthly') {
-                      displayHeader =
-                          '${languageNotifier.value == 'th' ? 'เดือน' : 'Month:'} $key';
-                    } else {
-                      displayHeader =
-                          '${languageNotifier.value == 'th' ? 'ปี' : 'Year:'} $key';
-                    }
+                      String displayHeader = key;
+                      if (_groupType == 'daily') {
+                        displayHeader = '${T.get('date_prefix')} $key';
+                      } else if (_groupType == 'weekly') {
+                        DateTime start = DateFormat('dd/MM/yyyy').parse(key);
+                        DateTime end = start.add(const Duration(days: 6));
+                        String endStr = DateFormat('dd/MM/yyyy').format(end);
+                        displayHeader = '${T.get('week_prefix')} $key - $endStr';
+                      } else if (_groupType == 'monthly') {
+                        displayHeader = '${T.get('month_prefix')} $key';
+                      } else {
+                        displayHeader = '${T.get('year_prefix')} $key';
+                      }
 
-                    listItems.add(displayHeader);
-                    listItems.addAll(tempMap[key]!);
-                  }
-                }
+                      listItems.add(displayHeader);
+                      listItems.addAll(tempMap[key]!);
+                    }
 
                 return Column(
                   children: [
