@@ -63,6 +63,11 @@ class T {
       'app_version': 'เวอร์ชัน 1.1.0',
       'about_desc':
           'แอปพลิเคชันจัดการการเงินส่วนบุคคล พัฒนาด้วย Flutter และ Firebase เพื่อให้คุณติดตามรายรับ-รายจ่ายได้อย่างมีประสิทธิภาพ',
+      'addCustomCategory': '+ เพิ่มหมวดหมู่ใหม่...',
+      'addCustomPayment': '+ เพิ่มช่องทางใหม่...',
+      'enterCategoryName': 'กรอกชื่อหมวดหมู่ใหม่',
+      'enterPaymentName': 'กรอกชื่อช่องทางชำระเงินใหม่',
+      'nameLabel': 'ชื่อ',
     },
     'en': {
       'appTitle': 'Expense Tracker',
@@ -125,6 +130,11 @@ class T {
       'app_version': 'Version 1.1.0',
       'about_desc':
           'A personal finance management app built with Flutter and Firebase to help you track your income and expenses efficiently.',
+      'addCustomCategory': '+ Add new category...',
+      'addCustomPayment': '+ Add new payment method...',
+      'enterCategoryName': 'Enter new category name',
+      'enterPaymentName': 'Enter new payment method name',
+      'nameLabel': 'Name',
     }
   };
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 import '../models/transaction_model.dart';
 import '../main.dart';
@@ -55,20 +57,151 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ];
 
   final Set<String> _pendingDeleteIds = {};
-
   final CollectionReference _transactionsCollection =
       FirebaseFirestore.instance.collection('transactions');
 
   String _groupType = 'monthly';
   String _filterType = 'all';
-  String _paymentFilter = 'all'; // ตัวแปรสำหรับกรองตามช่องทางชำระเงิน
+  String _paymentFilter = 'all';
   String _sortOrder = 'newest';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCustomSettings();
+  }
+
+  Future<void> _loadCustomSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final customCats = prefs.getString('custom_categories');
+    if (customCats != null) {
+      final Map<String, dynamic> decoded = jsonDecode(customCats);
+      setState(() {
+        decoded.forEach((key, value) {
+          if (!_categoryIcons.containsKey(key)) {
+            _categoryIcons[key] = Icons.label;
+            _categoryColors[key] = Colors.blueGrey;
+          }
+        });
+      });
+    }
+
+    final customPayments = prefs.getString('custom_payments');
+    if (customPayments != null) {
+      final List<dynamic> decoded = jsonDecode(customPayments);
+      setState(() {
+        for (var p in decoded) {
+          if (!_paymentIcons.containsKey(p)) {
+            _paymentIcons[p] = Icons.payment;
+          }
+        }
+      });
+    }
+  }
+
+  Future<void> _saveCustomCategory(String name) async {
+    if (name.trim().isEmpty || _categoryIcons.containsKey(name)) return;
+    setState(() {
+      _categoryIcons[name] = Icons.label;
+      _categoryColors[name] = Colors.blueGrey;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final customKeys = _categoryIcons.keys
+        .where((k) => ![
+              'อาหาร',
+              'เดินทาง',
+              'ช้อปปิ้ง',
+              'บิล/ค่าใช้จ่าย',
+              'เงินเดือน/รายรับ',
+              'อื่นๆ'
+            ].contains(k))
+        .toList();
+    await prefs.setString(
+        'custom_categories', jsonEncode({for (var v in customKeys) v: true}));
+  }
+
+  Future<void> _saveCustomPayment(String name) async {
+    if (name.trim().isEmpty || _paymentIcons.containsKey(name)) return;
+    setState(() {
+      _paymentIcons[name] = Icons.payment;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    final customKeys = _paymentIcons.keys
+        .where(
+            (k) => !['cash', 'promptpay', 'truemoney', 'paotang'].contains(k))
+        .toList();
+    await prefs.setString('custom_payments', jsonEncode(customKeys));
+  }
 
   Color _colorOf(String category) =>
       _categoryColors[category] ?? Colors.blueGrey;
 
   IconData _iconOf(String category) =>
       _categoryIcons[category] ?? Icons.category;
+
+  Future<void> _showAddCategoryDialog(
+      BuildContext context, StateSetter setModalState) async {
+    final controller = TextEditingController();
+    return showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(T.get('addCategory')),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(labelText: T.get('categoryName')),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(T.get('cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.isNotEmpty) {
+                await _saveCustomCategory(controller.text.trim());
+                setModalState(() {});
+                setState(() {});
+              }
+              Navigator.pop(ctx);
+            },
+            child: Text(T.get('save')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddPaymentDialog(
+      BuildContext context, StateSetter setModalState) async {
+    final controller = TextEditingController();
+    return showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(T.get('addPayment')),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(labelText: T.get('paymentName')),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(T.get('cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.isNotEmpty) {
+                await _saveCustomPayment(controller.text.trim());
+                setModalState(() {});
+                setState(() {});
+              }
+              Navigator.pop(ctx);
+            },
+            child: Text(T.get('save')),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildSummaryItem(String title, double amount, Color color) {
     return Column(
@@ -133,6 +266,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildFilterBar() {
+    List<String> paymentItems = ['all', ..._paymentIcons.keys];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -152,7 +286,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           _buildDropdown(
             _paymentFilter,
-            ['all', 'cash', 'promptpay', 'truemoney', 'paotang'],
+            paymentItems,
             Icons.payment,
             (val) => setState(() => _paymentFilter = val!),
           ),
@@ -168,11 +302,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildCategoryField({
+    required BuildContext context,
     required String selected,
     required ValueChanged<String?> onChanged,
     required VoidCallback onPickColor,
+    required StateSetter? setModalState,
     bool outlined = false,
   }) {
+    List<DropdownMenuItem<String>> categoryItems =
+        _categoryIcons.keys.map((category) {
+      return DropdownMenuItem<String>(
+        value: category,
+        child: Row(
+          children: [
+            Icon(_iconOf(category), color: _colorOf(category), size: 20),
+            const SizedBox(width: 8),
+            Text(T.get(category)),
+          ],
+        ),
+      );
+    }).toList();
+
+    categoryItems.add(
+      DropdownMenuItem<String>(
+        value: '__add_new__',
+        child: Text(T.get('addCustomCategory'),
+            style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+      ),
+    );
+
     return Row(
       children: [
         Expanded(
@@ -182,20 +340,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               labelText: T.get('categoryLabel'),
               border: outlined ? const OutlineInputBorder() : null,
             ),
-            items: _categoryIcons.keys.map((category) {
-              return DropdownMenuItem<String>(
-                value: category,
-                child: Row(
-                  children: [
-                    Icon(_iconOf(category),
-                        color: _colorOf(category), size: 20),
-                    const SizedBox(width: 8),
-                    Text(T.get(category)),
-                  ],
-                ),
-              );
-            }).toList(),
-            onChanged: onChanged,
+            items: categoryItems,
+            onChanged: (val) {
+              if (val == '__add_new__') {
+                _showAddCategoryDialog(context, setModalState ?? setState);
+              } else {
+                onChanged(val);
+              }
+            },
           ),
         ),
         IconButton(
@@ -216,10 +368,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              T.get('pickColor'),
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
+            Text(T.get('pickColor'),
+                style: const TextStyle(fontSize: 14, color: Colors.grey)),
             const SizedBox(height: 16),
             Wrap(
               spacing: 12,
@@ -240,12 +390,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       border: isSelected
                           ? Border.all(color: Colors.white, width: 3)
                           : null,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 4,
-                        ),
-                      ],
                     ),
                     child: isSelected
                         ? const Icon(Icons.check, color: Colors.white)
@@ -258,9 +402,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(T.get('close')),
-          ),
+              onPressed: () => Navigator.pop(ctx), child: Text(T.get('close'))),
         ],
       ),
     );
@@ -271,14 +413,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final amountController = TextEditingController(text: tx.amount.toString());
     String selectedCategory = tx.category;
     String selectedPaymentMethod =
-        ['cash', 'promptpay', 'truemoney', 'paotang'].contains(tx.paymentMethod)
-            ? tx.paymentMethod
-            : 'cash';
+        _paymentIcons.containsKey(tx.paymentMethod) ? tx.paymentMethod : 'cash';
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setStateDialog) {
+          List<DropdownMenuItem<String>> paymentItems =
+              _paymentIcons.keys.map((method) {
+            return DropdownMenuItem(
+              value: method,
+              child: Row(
+                children: [
+                  Icon(_paymentIcons[method] ?? Icons.payment,
+                      color: Colors.blue),
+                  const SizedBox(width: 8),
+                  Text(T.get(method)),
+                ],
+              ),
+            );
+          }).toList();
+
+          paymentItems.add(
+            DropdownMenuItem(
+              value: '__add_new__',
+              child: Text(T.get('addCustomPayment'),
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.primary)),
+            ),
+          );
+
           return AlertDialog(
             title: Text(T.get('edit')),
             content: SingleChildScrollView(
@@ -286,19 +450,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
-                    controller: titleController,
-                    decoration: InputDecoration(labelText: T.get('titleLabel')),
-                  ),
+                      controller: titleController,
+                      decoration:
+                          InputDecoration(labelText: T.get('titleLabel'))),
                   const SizedBox(height: 16),
                   TextField(
-                    controller: amountController,
-                    decoration:
-                        InputDecoration(labelText: T.get('amountLabel')),
-                    keyboardType: TextInputType.number,
-                  ),
+                      controller: amountController,
+                      decoration:
+                          InputDecoration(labelText: T.get('amountLabel')),
+                      keyboardType: TextInputType.number),
                   const SizedBox(height: 16),
                   _buildCategoryField(
+                    context: context,
                     selected: selectedCategory,
+                    setModalState: setStateDialog,
                     onChanged: (val) =>
                         setStateDialog(() => selectedCategory = val!),
                     onPickColor: () async {
@@ -309,64 +474,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
                     value: selectedPaymentMethod,
-                    decoration: InputDecoration(
-                      labelText: T.get('paymentMethodLabel'),
-                    ),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'cash',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.payments, color: Colors.green),
-                            const SizedBox(width: 8),
-                            Text(T.get('cash')),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'promptpay',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.account_balance,
-                                color: Colors.blue),
-                            const SizedBox(width: 8),
-                            Text(T.get('promptpay')),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'truemoney',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.account_balance_wallet,
-                                color: Colors.orange),
-                            const SizedBox(width: 8),
-                            Text(T.get('truemoney')),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'paotang',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.wallet, color: Colors.lightBlue),
-                            const SizedBox(width: 8),
-                            Text(T.get('paotang')),
-                          ],
-                        ),
-                      ),
-                    ],
-                    onChanged: (val) =>
-                        setStateDialog(() => selectedPaymentMethod = val!),
+                    decoration:
+                        InputDecoration(labelText: T.get('paymentMethodLabel')),
+                    items: paymentItems,
+                    onChanged: (val) {
+                      if (val == '__add_new__') {
+                        _showAddPaymentDialog(context, setStateDialog);
+                      } else {
+                        setStateDialog(() => selectedPaymentMethod = val!);
+                      }
+                    },
                   ),
                 ],
               ),
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(T.get('cancel')),
-              ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(T.get('cancel'))),
               ElevatedButton(
                 onPressed: () {
                   _transactionsCollection.doc(tx.id).update({
@@ -399,11 +524,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
+            List<DropdownMenuItem<String>> paymentItems =
+                _paymentIcons.keys.map((method) {
+              return DropdownMenuItem(
+                value: method,
+                child: Row(
+                  children: [
+                    Icon(_paymentIcons[method] ?? Icons.payment,
+                        color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Text(T.get(method)),
+                  ],
+                ),
+              );
+            }).toList();
+
+            paymentItems.add(
+              DropdownMenuItem(
+                value: '__add_new__',
+                child: Text(T.get('addCustomPayment'),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary)),
+              ),
+            );
+
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx).viewInsets.bottom +
@@ -417,32 +565,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      T.get('addTransaction'),
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
+                    Text(T.get('addTransaction'),
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 16),
                     TextField(
-                      controller: titleController,
-                      decoration: InputDecoration(
-                        labelText: T.get('titleLabel'),
-                        border: const OutlineInputBorder(),
-                      ),
-                    ),
+                        controller: titleController,
+                        decoration: InputDecoration(
+                            labelText: T.get('titleLabel'),
+                            border: const OutlineInputBorder())),
                     const SizedBox(height: 16),
                     TextField(
-                      controller: amountController,
-                      decoration: InputDecoration(
-                        labelText: T.get('amountLabel'),
-                        border: const OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
+                        controller: amountController,
+                        decoration: InputDecoration(
+                            labelText: T.get('amountLabel'),
+                            border: const OutlineInputBorder()),
+                        keyboardType: TextInputType.number),
                     const SizedBox(height: 16),
                     _buildCategoryField(
+                      context: context,
                       selected: selectedCategory,
                       outlined: true,
+                      setModalState: setModalState,
                       onChanged: (val) =>
                           setModalState(() => selectedCategory = val!),
                       onPickColor: () async {
@@ -454,55 +598,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     DropdownButtonFormField<String>(
                       value: selectedPaymentMethod,
                       decoration: InputDecoration(
-                        labelText: T.get('paymentMethodLabel'),
-                        border: const OutlineInputBorder(),
-                      ),
-                      items: [
-                        DropdownMenuItem(
-                          value: 'cash',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.payments, color: Colors.green),
-                              const SizedBox(width: 8),
-                              Text(T.get('cash')),
-                            ],
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'promptpay',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.account_balance,
-                                  color: Colors.blue),
-                              const SizedBox(width: 8),
-                              Text(T.get('promptpay')),
-                            ],
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'truemoney',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.account_balance_wallet,
-                                  color: Colors.orange),
-                              const SizedBox(width: 8),
-                              Text(T.get('truemoney')),
-                            ],
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'paotang',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.wallet, color: Colors.lightBlue),
-                              const SizedBox(width: 8),
-                              Text(T.get('paotang')),
-                            ],
-                          ),
-                        ),
-                      ],
-                      onChanged: (val) =>
-                          setModalState(() => selectedPaymentMethod = val!),
+                          labelText: T.get('paymentMethodLabel'),
+                          border: const OutlineInputBorder()),
+                      items: paymentItems,
+                      onChanged: (val) {
+                        if (val == '__add_new__') {
+                          _showAddPaymentDialog(context, setModalState);
+                        } else {
+                          setModalState(() => selectedPaymentMethod = val!);
+                        }
+                      },
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -511,19 +616,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Text(T.get('typeLabel'),
                             style: const TextStyle(fontSize: 16)),
                         ChoiceChip(
-                          label: Text(T.get('expense')),
-                          selected: isExpense,
-                          selectedColor: Colors.redAccent.withOpacity(0.3),
-                          onSelected: (_) =>
-                              setModalState(() => isExpense = true),
-                        ),
+                            label: Text(T.get('expense')),
+                            selected: isExpense,
+                            onSelected: (_) =>
+                                setModalState(() => isExpense = true)),
                         ChoiceChip(
-                          label: Text(T.get('income')),
-                          selected: !isExpense,
-                          selectedColor: Colors.green.withOpacity(0.3),
-                          onSelected: (_) =>
-                              setModalState(() => isExpense = false),
-                        ),
+                            label: Text(T.get('income')),
+                            selected: !isExpense,
+                            onSelected: (_) =>
+                                setModalState(() => isExpense = false)),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -532,14 +633,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       height: 50,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).colorScheme.primary,
-                          foregroundColor: Colors.white,
-                        ),
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            foregroundColor: Colors.white),
                         onPressed: () {
                           if (titleController.text.isEmpty ||
                               amountController.text.isEmpty) return;
-
                           _transactionsCollection.add({
                             'title': titleController.text,
                             'amount':
@@ -549,7 +648,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             'category': selectedCategory,
                             'paymentMethod': selectedPaymentMethod,
                           });
-
                           Navigator.pop(ctx);
                         },
                         child: Text(T.get('save'),
@@ -590,7 +688,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return 0;
       }
     });
-
     return result;
   }
 
@@ -634,8 +731,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 'weekly':
         final start = DateFormat('dd/MM/yyyy').parse(key);
         final end = start.add(const Duration(days: 6));
-        final endStr = DateFormat('dd/MM/yyyy').format(end);
-        return '${T.get('week_prefix')} $key - $endStr';
+        return '${T.get('week_prefix')} $key - ${DateFormat('dd/MM/yyyy').format(end)}';
       case 'monthly':
         return '${T.get('month_prefix')} $key';
       case 'yearly':
@@ -647,16 +743,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<dynamic> _buildListItems(List<TransactionModel> transactions) {
     if (_groupType == 'none' || transactions.isEmpty) return transactions;
-
     final Map<String, List<TransactionModel>> grouped = {};
     for (final tx in transactions) {
       grouped.putIfAbsent(_groupKey(tx), () => []).add(tx);
     }
-
     var sortedKeys = grouped.keys.toList()..sort(_compareGroupKeys);
-    if (_sortOrder == 'oldest') {
-      sortedKeys = sortedKeys.reversed.toList();
-    }
+    if (_sortOrder == 'oldest') sortedKeys = sortedKeys.reversed.toList();
 
     final List<dynamic> items = [];
     for (final key in sortedKeys) {
@@ -676,7 +768,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final sections = categoryTotals.entries.map((entry) {
       final percentage = totalSum > 0 ? (entry.value / totalSum * 100) : 0.0;
-
       return PieChartSectionData(
         color: _colorOf(entry.key),
         value: entry.value,
@@ -689,14 +780,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Icon(_iconOf(entry.key), color: Colors.white, size: 18),
                   const SizedBox(height: 2),
-                  Text(
-                    '${percentage.toStringAsFixed(0)}%',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  Text('${percentage.toStringAsFixed(0)}%',
+                      style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
                 ],
               )
             : const SizedBox.shrink(),
@@ -707,15 +795,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       children: [
         SizedBox(
-          height: 200,
-          child: PieChart(
-            PieChartData(
-              sectionsSpace: 2,
-              centerSpaceRadius: 40,
-              sections: sections,
-            ),
-          ),
-        ),
+            height: 200,
+            child: PieChart(PieChartData(
+                sectionsSpace: 2, centerSpaceRadius: 40, sections: sections))),
         const SizedBox(height: 16),
       ],
     );
@@ -724,21 +806,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildGroupHeaderWidget(String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 24, right: 16, top: 16, bottom: 4),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-      ),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary)),
     );
   }
 
   void _handleDelete(BuildContext context, TransactionModel tx) {
     setState(() => _pendingDeleteIds.add(tx.id));
     bool isUndone = false;
-
     final messenger = ScaffoldMessenger.of(context);
     messenger.clearSnackBars();
     messenger
@@ -747,25 +825,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
             backgroundColor: Colors.black.withOpacity(0.75),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            duration: const Duration(seconds: 3),
-            content: Row(
-              children: [
-                const Icon(Icons.info_outline, color: Colors.white, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    '${T.get('deleted')} ${tx.title}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            content: Text('${T.get('deleted')} ${tx.title}',
+                style: const TextStyle(color: Colors.white)),
             action: SnackBarAction(
               label: T.get('undo'),
               textColor: Colors.amberAccent,
@@ -802,11 +863,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             const Icon(Icons.delete, color: Colors.white),
             const SizedBox(width: 8),
-            Text(
-              T.get('delete'),
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold),
-            ),
+            Text(T.get('delete'),
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -816,21 +875,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: ListTile(
-            leading: Tooltip(
-              message: T.get('changeColor'),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () => _showColorPickerDialog(tx.category),
-                child: CircleAvatar(
-                  backgroundColor: categoryColor.withOpacity(0.2),
-                  child: Icon(_iconOf(tx.category), color: categoryColor),
-                ),
-              ),
+            leading: CircleAvatar(
+              backgroundColor: categoryColor.withOpacity(0.2),
+              child: Icon(_iconOf(tx.category), color: categoryColor),
             ),
-            title: Text(
-              tx.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+            title: Text(tx.title,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -841,26 +891,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Icon(_paymentIcons[tx.paymentMethod] ?? Icons.payment,
                         size: 14, color: Colors.grey),
                     const SizedBox(width: 4),
-                    Text(
-                      T.get(tx.paymentMethod),
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
+                    Text(T.get(tx.paymentMethod),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey)),
                   ],
                 ),
-                if (tx.updatedAt != null)
-                  Text(
-                    '(แก้ไขล่าสุด: ${DateFormat('dd/MM/yyyy HH:mm').format(tx.updatedAt!)})',
-                    style: const TextStyle(fontSize: 12, color: Colors.orange),
-                  ),
               ],
             ),
             trailing: Text(
               '${tx.isExpense ? '-' : '+'}$formattedAmount ฿',
               style: TextStyle(
-                color: tx.isExpense ? Colors.red : Colors.green,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+                  color: tx.isExpense ? Colors.red : Colors.green,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16),
             ),
           ),
         ),
@@ -870,7 +913,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildContent(List<TransactionModel> allTransactions) {
     List<TransactionModel> scopeTransactions = allTransactions;
-
     if (_groupType != 'none' && allTransactions.isNotEmpty) {
       final latestKey = _groupKey(allTransactions.first);
       scopeTransactions =
@@ -891,7 +933,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final totalExpense = filteredForStats
         .where((tx) => tx.isExpense)
         .fold(0.0, (sum, tx) => sum + tx.amount);
-
     final listItems = _buildListItems(_filterAndSort(allTransactions));
 
     return CustomScrollView(
@@ -915,15 +956,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      T.get('history'),
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      T.get('swipeToDelete'),
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
+                    Text(T.get('history'),
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text(T.get('swipeToDelete'),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey)),
                   ],
                 ),
               ),
@@ -937,9 +975,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ? SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
-                  child: Text(T.get('noMatch'),
-                      style: const TextStyle(color: Colors.grey)),
-                ),
+                    child: Text(T.get('noMatch'),
+                        style: const TextStyle(color: Colors.grey))),
               )
             : SliverList(
                 delegate: SliverChildBuilderDelegate(
@@ -971,10 +1008,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 tooltip: T.get('settings'),
                 onPressed: () {
                   Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const SettingsScreen()),
-                  );
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const SettingsScreen()));
                 },
               ),
             ],
