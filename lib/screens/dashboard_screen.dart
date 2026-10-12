@@ -37,7 +37,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final Map<String, IconData> _paymentIcons = {
     'cash': Icons.payments_outlined,
     'promptpay': Icons.account_balance_wallet_outlined,
-    'creditCard': Icons.credit_card_outlined,
+    'truemoney': Icons.account_balance_wallet,
+    'paotang': Icons.wallet,
   };
 
   final List<Color> _availableColors = [
@@ -60,6 +61,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   String _groupType = 'monthly';
   String _filterType = 'all';
+  String _paymentFilter = 'all'; // ตัวแปรสำหรับกรองตามช่องทางชำระเงิน
   String _sortOrder = 'newest';
 
   Color _colorOf(String category) =>
@@ -147,6 +149,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ['all', 'income', 'expense'],
             Icons.filter_list,
             (val) => setState(() => _filterType = val!),
+          ),
+          _buildDropdown(
+            _paymentFilter,
+            ['all', 'cash', 'promptpay', 'truemoney', 'paotang'],
+            Icons.payment,
+            (val) => setState(() => _paymentFilter = val!),
           ),
           _buildDropdown(
             _sortOrder,
@@ -262,7 +270,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final titleController = TextEditingController(text: tx.title);
     final amountController = TextEditingController(text: tx.amount.toString());
     String selectedCategory = tx.category;
-    String selectedPaymentMethod = tx.paymentMethod;
+    String selectedPaymentMethod =
+        ['cash', 'promptpay', 'truemoney', 'paotang'].contains(tx.paymentMethod)
+            ? tx.paymentMethod
+            : 'cash';
 
     showDialog(
       context: context,
@@ -324,12 +335,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                       DropdownMenuItem(
-                        value: 'creditCard',
+                        value: 'truemoney',
                         child: Row(
                           children: [
-                            const Icon(Icons.credit_card, color: Colors.purple),
+                            const Icon(Icons.account_balance_wallet,
+                                color: Colors.orange),
                             const SizedBox(width: 8),
-                            Text(T.get('creditCard')),
+                            Text(T.get('truemoney')),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'paotang',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.wallet, color: Colors.lightBlue),
+                            const SizedBox(width: 8),
+                            Text(T.get('paotang')),
                           ],
                         ),
                       ),
@@ -458,13 +480,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         DropdownMenuItem(
-                          value: 'creditCard',
+                          value: 'truemoney',
                           child: Row(
                             children: [
-                              const Icon(Icons.credit_card,
-                                  color: Colors.purple),
+                              const Icon(Icons.account_balance_wallet,
+                                  color: Colors.orange),
                               const SizedBox(width: 8),
-                              Text(T.get('creditCard')),
+                              Text(T.get('truemoney')),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'paotang',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.wallet, color: Colors.lightBlue),
+                              const SizedBox(width: 8),
+                              Text(T.get('paotang')),
                             ],
                           ),
                         ),
@@ -537,8 +569,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<TransactionModel> _filterAndSort(List<TransactionModel> transactions) {
     final result = transactions.where((tx) {
-      if (_filterType == 'income') return !tx.isExpense;
-      if (_filterType == 'expense') return tx.isExpense;
+      if (_filterType == 'income' && tx.isExpense) return false;
+      if (_filterType == 'expense' && !tx.isExpense) return false;
+      if (_paymentFilter != 'all' && tx.paymentMethod != _paymentFilter)
+        return false;
       return true;
     }).toList();
 
@@ -844,8 +878,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final filteredForStats = scopeTransactions.where((tx) {
-      if (_filterType == 'income') return !tx.isExpense;
-      if (_filterType == 'expense') return tx.isExpense;
+      if (_filterType == 'income' && tx.isExpense) return false;
+      if (_filterType == 'expense' && !tx.isExpense) return false;
+      if (_paymentFilter != 'all' && tx.paymentMethod != _paymentFilter)
+        return false;
       return true;
     }).toList();
 
