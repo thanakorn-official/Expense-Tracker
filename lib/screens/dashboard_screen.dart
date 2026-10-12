@@ -340,99 +340,104 @@ class _DashboardScreenState extends State<DashboardScreen> {
           builder: (BuildContext context, StateSetter setModalState) {
             return Padding(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom +
+                    MediaQuery.of(ctx).padding.bottom +
+                    16,
                 left: 16,
                 right: 16,
                 top: 24,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    T.get('addTransaction'),
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: titleController,
-                    decoration: InputDecoration(
-                      labelText: T.get('titleLabel'),
-                      border: const OutlineInputBorder(),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      T.get('addTransaction'),
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: amountController,
-                    decoration: InputDecoration(
-                      labelText: T.get('amountLabel'),
-                      border: const OutlineInputBorder(),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: titleController,
+                      decoration: InputDecoration(
+                        labelText: T.get('titleLabel'),
+                        border: const OutlineInputBorder(),
+                      ),
                     ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildCategoryField(
-                    selected: selectedCategory,
-                    outlined: true,
-                    onChanged: (val) =>
-                        setModalState(() => selectedCategory = val!),
-                    onPickColor: () async {
-                      await _showColorPickerDialog(selectedCategory);
-                      setModalState(() {});
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Text(T.get('typeLabel'),
-                          style: const TextStyle(fontSize: 16)),
-                      ChoiceChip(
-                        label: Text(T.get('expense')),
-                        selected: isExpense,
-                        selectedColor: Colors.redAccent.withOpacity(0.3),
-                        onSelected: (_) =>
-                            setModalState(() => isExpense = true),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: amountController,
+                      decoration: InputDecoration(
+                        labelText: T.get('amountLabel'),
+                        border: const OutlineInputBorder(),
                       ),
-                      ChoiceChip(
-                        label: Text(T.get('income')),
-                        selected: !isExpense,
-                        selectedColor: Colors.green.withOpacity(0.3),
-                        onSelected: (_) =>
-                            setModalState(() => isExpense = false),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                      onPressed: () {
-                        if (titleController.text.isEmpty ||
-                            amountController.text.isEmpty) return;
-
-                        _transactionsCollection.add({
-                          'title': titleController.text,
-                          'amount':
-                              double.tryParse(amountController.text) ?? 0.0,
-                          'date': DateTime.now().toIso8601String(),
-                          'isExpense': isExpense ? 1 : 0,
-                          'category': selectedCategory,
-                        });
-
-                        Navigator.pop(ctx);
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildCategoryField(
+                      selected: selectedCategory,
+                      outlined: true,
+                      onChanged: (val) =>
+                          setModalState(() => selectedCategory = val!),
+                      onPickColor: () async {
+                        await _showColorPickerDialog(selectedCategory);
+                        setModalState(() {});
                       },
-                      child: Text(T.get('save'),
-                          style: const TextStyle(fontSize: 16)),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Text(T.get('typeLabel'),
+                            style: const TextStyle(fontSize: 16)),
+                        ChoiceChip(
+                          label: Text(T.get('expense')),
+                          selected: isExpense,
+                          selectedColor: Colors.redAccent.withOpacity(0.3),
+                          onSelected: (_) =>
+                              setModalState(() => isExpense = true),
+                        ),
+                        ChoiceChip(
+                          label: Text(T.get('income')),
+                          selected: !isExpense,
+                          selectedColor: Colors.green.withOpacity(0.3),
+                          onSelected: (_) =>
+                              setModalState(() => isExpense = false),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          if (titleController.text.isEmpty ||
+                              amountController.text.isEmpty) return;
+
+                          _transactionsCollection.add({
+                            'title': titleController.text,
+                            'amount':
+                                double.tryParse(amountController.text) ?? 0.0,
+                            'date': DateTime.now().toIso8601String(),
+                            'isExpense': isExpense ? 1 : 0,
+                            'category': selectedCategory,
+                          });
+
+                          Navigator.pop(ctx);
+                        },
+                        child: Text(T.get('save'),
+                            style: const TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             );
           },
@@ -731,70 +736,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // สร้างรายการประวัติธุรกรรมทั้งหมด
-  Widget _buildTransactionList(List<dynamic> listItems) {
-    if (listItems.isEmpty) {
-      return Center(
-        child:
-            Text(T.get('noMatch'), style: const TextStyle(color: Colors.grey)),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: listItems.length,
-      itemBuilder: (context, index) {
-        final item = listItems[index];
-        if (item is String) return _buildGroupHeaderWidget(item);
-        return _buildTransactionItem(context, item as TransactionModel);
-      },
-    );
-  }
-
   // สร้างส่วนเนื้อหาหลักจากข้อมูลธุรกรรม
   Widget _buildContent(List<TransactionModel> allTransactions) {
-    final totalIncome = allTransactions
+    final filteredForStats = allTransactions.where((tx) {
+      if (_filterType == 'income') return !tx.isExpense;
+      if (_filterType == 'expense') return tx.isExpense;
+      return true;
+    }).toList();
+
+    final totalIncome = filteredForStats
         .where((tx) => !tx.isExpense)
         .fold(0.0, (sum, tx) => sum + tx.amount);
-    final totalExpense = allTransactions
+    final totalExpense = filteredForStats
         .where((tx) => tx.isExpense)
         .fold(0.0, (sum, tx) => sum + tx.amount);
 
     final listItems = _buildListItems(_filterAndSort(allTransactions));
 
-    return Column(
-      children: [
-        const SizedBox(height: 24),
-        if (allTransactions.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Text(T.get('noData'),
-                style: const TextStyle(color: Colors.grey)),
-          )
-        else
-          _buildPieChart(allTransactions),
-        _buildSummaryRow(totalIncome, totalExpense),
-        const Divider(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
             children: [
-              Text(
-                T.get('history'),
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const SizedBox(height: 24),
+              if (allTransactions.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Text(T.get('noData'),
+                      style: const TextStyle(color: Colors.grey)),
+                )
+              else if (filteredForStats.isNotEmpty)
+                _buildPieChart(filteredForStats),
+              _buildSummaryRow(totalIncome, totalExpense),
+              const Divider(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      T.get('history'),
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      T.get('swipeToDelete'),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
               ),
-              Text(
-                T.get('swipeToDelete'),
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
+              const SizedBox(height: 8),
+              _buildFilterBar(),
+              const SizedBox(height: 8),
             ],
           ),
         ),
-        const SizedBox(height: 8),
-        _buildFilterBar(),
-        const SizedBox(height: 8),
-        Expanded(child: _buildTransactionList(listItems)),
+        listItems.isEmpty
+            ? SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Text(T.get('noMatch'),
+                      style: const TextStyle(color: Colors.grey)),
+                ),
+              )
+            : SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = listItems[index];
+                    if (item is String) return _buildGroupHeaderWidget(item);
+                    return _buildTransactionItem(
+                        context, item as TransactionModel);
+                  },
+                  childCount: listItems.length,
+                ),
+              ),
       ],
     );
   }

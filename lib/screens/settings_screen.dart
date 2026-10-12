@@ -7,7 +7,6 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ครอบด้วย ValueListenableBuilder เพื่อให้หน้าตั้งค่าเปลี่ยนภาษาทันทีที่เลือก
     return ValueListenableBuilder<String>(
       valueListenable: languageNotifier,
       builder: (context, lang, child) {
@@ -19,7 +18,6 @@ class SettingsScreen extends StatelessWidget {
           body: ListView(
             children: [
               const SizedBox(height: 8),
-              // --- เมนูตั้งค่าภาษา ---
               ListTile(
                 leading: const Icon(Icons.language),
                 title: Text(T.get('language')),
@@ -36,8 +34,6 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
               const Divider(),
-
-              // --- เมนูตั้งค่าธีม ---
               ValueListenableBuilder<ThemeMode>(
                   valueListenable: themeNotifier,
                   builder: (context, currentMode, child) {
@@ -50,13 +46,13 @@ class SettingsScreen extends StatelessWidget {
                         items: [
                           DropdownMenuItem(
                               value: ThemeMode.system,
-                              child: Text(T.get('System'))),
+                              child: Text(T.get('theme_system'))),
                           DropdownMenuItem(
                               value: ThemeMode.light,
-                              child: Text(T.get('Light Theme'))),
+                              child: Text(T.get('theme_light'))),
                           DropdownMenuItem(
                               value: ThemeMode.dark,
-                              child: Text(T.get('Dark Theme'))),
+                              child: Text(T.get('theme_dark'))),
                         ],
                         onChanged: (val) {
                           if (val != null) themeNotifier.value = val;
@@ -65,8 +61,6 @@ class SettingsScreen extends StatelessWidget {
                     );
                   }),
               const Divider(),
-
-              // --- เมนู About (หน้าต่างป๊อปอัพลิขสิทธิ์) ---
               ListTile(
                 leading: const Icon(Icons.info_outline),
                 title: Text(T.get('about')),

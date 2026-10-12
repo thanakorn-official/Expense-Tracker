@@ -5,7 +5,7 @@ import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
-final ValueNotifier<String> languageNotifier = ValueNotifier('th');
+final ValueNotifier<String> languageNotifier = ValueNotifier<String>('th');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

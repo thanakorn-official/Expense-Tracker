@@ -34,12 +34,11 @@ class T {
       'oldest': 'เก่าสุด',
       'highest': 'ยอดสูงสุด',
       'lowest': 'ยอดต่ำสุด',
-      // --- คำนำหน้าการจัดกลุ่ม ---
+      'loading': 'กำลังเตรียมพร้อม...',
       'date_prefix': 'วันที่',
       'week_prefix': 'สัปดาห์ที่',
       'month_prefix': 'เดือน',
       'year_prefix': 'ปี',
-      // ------------------------
       'อาหาร': 'อาหาร',
       'เดินทาง': 'เดินทาง',
       'ช้อปปิ้ง': 'ช้อปปิ้ง',
@@ -49,7 +48,6 @@ class T {
       'close': 'ปิด',
       'pickColor': 'เลือกสีที่ต้องการ:',
       'changeColor': 'เปลี่ยนสีหมวดหมู่',
-      // --- หมวดหมู่ Settings ---
       'settings': 'การตั้งค่า',
       'language': 'ภาษา (Language)',
       'theme': 'ธีมหน้าจอ',
@@ -93,12 +91,11 @@ class T {
       'oldest': 'Oldest',
       'highest': 'Highest',
       'lowest': 'Lowest',
-      // --- Grouping Prefixes ---
+      'loading': 'Loading...',
       'date_prefix': 'Date:',
       'week_prefix': 'Week:',
       'month_prefix': 'Month:',
       'year_prefix': 'Year:',
-      // -------------------------
       'อาหาร': 'Food',
       'เดินทาง': 'Transport',
       'ช้อปปิ้ง': 'Shopping',
@@ -108,7 +105,6 @@ class T {
       'close': 'Close',
       'pickColor': 'Choose color:',
       'changeColor': 'Change color',
-      // --- Settings ---
       'settings': 'Settings',
       'language': 'Language',
       'theme': 'App Theme',
