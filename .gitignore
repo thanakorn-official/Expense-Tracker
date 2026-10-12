@@ -32,7 +32,6 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
-/firebase_options.dart/
 
 # Symbolication related
 app.*.symbols
@@ -47,3 +46,4 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+lib/firebase_options.dart
