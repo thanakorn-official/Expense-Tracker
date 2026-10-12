@@ -58,7 +58,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final CollectionReference _transactionsCollection =
       FirebaseFirestore.instance.collection('transactions');
 
-  String _groupType = 'daily';
+  String _groupType = 'monthly';
   String _filterType = 'all';
   String _sortOrder = 'newest';
 
@@ -570,6 +570,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return DateFormat('dd/MM/yyyy').format(startOfWeek);
       case 'monthly':
         return DateFormat('MM/yyyy').format(tx.date);
+      case 'yearly':
+        return DateFormat('yyyy').format(tx.date);
       default:
         return DateFormat('yyyy').format(tx.date);
     }
@@ -584,8 +586,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 'monthly':
         final format = DateFormat('MM/yyyy');
         return format.parse(b).compareTo(format.parse(a));
-      default:
+      case 'yearly':
         return int.parse(b).compareTo(int.parse(a));
+      default:
+        return 0;
     }
   }
 
@@ -600,8 +604,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return '${T.get('week_prefix')} $key - $endStr';
       case 'monthly':
         return '${T.get('month_prefix')} $key';
-      default:
+      case 'yearly':
         return '${T.get('year_prefix')} $key';
+      default:
+        return key;
     }
   }
 
@@ -829,7 +835,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildContent(List<TransactionModel> allTransactions) {
-    final filteredForStats = allTransactions.where((tx) {
+    List<TransactionModel> scopeTransactions = allTransactions;
+
+    if (_groupType != 'none' && allTransactions.isNotEmpty) {
+      final latestKey = _groupKey(allTransactions.first);
+      scopeTransactions =
+          allTransactions.where((tx) => _groupKey(tx) == latestKey).toList();
+    }
+
+    final filteredForStats = scopeTransactions.where((tx) {
       if (_filterType == 'income') return !tx.isExpense;
       if (_filterType == 'expense') return tx.isExpense;
       return true;
