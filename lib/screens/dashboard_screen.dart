@@ -34,6 +34,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'อื่นๆ': Colors.teal,
   };
 
+  final Map<String, IconData> _paymentIcons = {
+    'cash': Icons.payments_outlined,
+    'promptpay': Icons.account_balance_wallet_outlined,
+    'creditCard': Icons.credit_card_outlined,
+  };
+
   final List<Color> _availableColors = [
     Colors.orange,
     Colors.blue,
@@ -56,15 +62,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _filterType = 'all';
   String _sortOrder = 'newest';
 
-  // ดึงสีของหมวดหมู่
   Color _colorOf(String category) =>
       _categoryColors[category] ?? Colors.blueGrey;
 
-  // ดึงไอคอนของหมวดหมู่
   IconData _iconOf(String category) =>
       _categoryIcons[category] ?? Icons.category;
 
-  // สร้างวิดเจ็ตแสดงยอดสรุป
   Widget _buildSummaryItem(String title, double amount, Color color) {
     return Column(
       children: [
@@ -82,7 +85,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // สร้างแถวสรุปรายรับ คงเหลือ รายจ่าย
   Widget _buildSummaryRow(double income, double expense) {
     final balance = income - expense;
     return Row(
@@ -96,7 +98,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // สร้างวิดเจ็ต Dropdown สำหรับตัวกรอง
   Widget _buildDropdown(String value, List<String> items, IconData icon,
       ValueChanged<String?> onChanged) {
     return Container(
@@ -129,7 +130,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // สร้างแถบตัวกรองและการจัดเรียง
   Widget _buildFilterBar() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -159,7 +159,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // สร้างช่องเลือกหมวดหมู่พร้อมปุ่มเปลี่ยนสี
   Widget _buildCategoryField({
     required String selected,
     required ValueChanged<String?> onChanged,
@@ -200,7 +199,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // แสดงหน้าต่างเลือกสีหมวดหมู่
   Future<void> _showColorPickerDialog(String category) {
     return showDialog(
       context: context,
@@ -260,11 +258,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // แสดงหน้าต่างแก้ไขรายการ
   void _showEditDialog(TransactionModel tx) {
     final titleController = TextEditingController(text: tx.title);
     final amountController = TextEditingController(text: tx.amount.toString());
     String selectedCategory = tx.category;
+    String selectedPaymentMethod = tx.paymentMethod;
 
     showDialog(
       context: context,
@@ -272,30 +270,75 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context, setStateDialog) {
           return AlertDialog(
             title: Text(T.get('edit')),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: InputDecoration(labelText: T.get('titleLabel')),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: amountController,
-                  decoration: InputDecoration(labelText: T.get('amountLabel')),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                _buildCategoryField(
-                  selected: selectedCategory,
-                  onChanged: (val) =>
-                      setStateDialog(() => selectedCategory = val!),
-                  onPickColor: () async {
-                    await _showColorPickerDialog(selectedCategory);
-                    setStateDialog(() {});
-                  },
-                ),
-              ],
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(labelText: T.get('titleLabel')),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: amountController,
+                    decoration:
+                        InputDecoration(labelText: T.get('amountLabel')),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildCategoryField(
+                    selected: selectedCategory,
+                    onChanged: (val) =>
+                        setStateDialog(() => selectedCategory = val!),
+                    onPickColor: () async {
+                      await _showColorPickerDialog(selectedCategory);
+                      setStateDialog(() {});
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: selectedPaymentMethod,
+                    decoration: InputDecoration(
+                      labelText: T.get('paymentMethodLabel'),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'cash',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.payments, color: Colors.green),
+                            const SizedBox(width: 8),
+                            Text(T.get('cash')),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'promptpay',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.account_balance,
+                                color: Colors.blue),
+                            const SizedBox(width: 8),
+                            Text(T.get('promptpay')),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'creditCard',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.credit_card, color: Colors.purple),
+                            const SizedBox(width: 8),
+                            Text(T.get('creditCard')),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) =>
+                        setStateDialog(() => selectedPaymentMethod = val!),
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -309,6 +352,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     'amount':
                         double.tryParse(amountController.text) ?? tx.amount,
                     'category': selectedCategory,
+                    'paymentMethod': selectedPaymentMethod,
                     'updatedAt': DateTime.now().toIso8601String(),
                   });
                   Navigator.pop(ctx);
@@ -322,12 +366,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // แสดงหน้าต่างเพิ่มรายการใหม่
   void _showAddTransactionSheet(BuildContext context) {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
     bool isExpense = true;
     String selectedCategory = 'อาหาร';
+    String selectedPaymentMethod = 'cash';
 
     showModalBottomSheet(
       context: context,
@@ -385,6 +429,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: selectedPaymentMethod,
+                      decoration: InputDecoration(
+                        labelText: T.get('paymentMethodLabel'),
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: [
+                        DropdownMenuItem(
+                          value: 'cash',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.payments, color: Colors.green),
+                              const SizedBox(width: 8),
+                              Text(T.get('cash')),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'promptpay',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.account_balance,
+                                  color: Colors.blue),
+                              const SizedBox(width: 8),
+                              Text(T.get('promptpay')),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'creditCard',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.credit_card,
+                                  color: Colors.purple),
+                              const SizedBox(width: 8),
+                              Text(T.get('creditCard')),
+                            ],
+                          ),
+                        ),
+                      ],
+                      onChanged: (val) =>
+                          setModalState(() => selectedPaymentMethod = val!),
+                    ),
+                    const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
@@ -427,6 +515,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             'date': DateTime.now().toIso8601String(),
                             'isExpense': isExpense ? 1 : 0,
                             'category': selectedCategory,
+                            'paymentMethod': selectedPaymentMethod,
                           });
 
                           Navigator.pop(ctx);
@@ -446,7 +535,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // กรองและเรียงลำดับรายการ
   List<TransactionModel> _filterAndSort(List<TransactionModel> transactions) {
     final result = transactions.where((tx) {
       if (_filterType == 'income') return !tx.isExpense;
@@ -472,7 +560,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return result;
   }
 
-  // สร้างคีย์สำหรับจัดกลุ่มรายการ
   String _groupKey(TransactionModel tx) {
     switch (_groupType) {
       case 'daily':
@@ -488,7 +575,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // เปรียบเทียบคีย์กลุ่มเพื่อเรียงจากใหม่ไปเก่า
   int _compareGroupKeys(String a, String b) {
     switch (_groupType) {
       case 'daily':
@@ -503,7 +589,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // สร้างข้อความหัวข้อของกลุ่ม
   String _groupHeader(String key) {
     switch (_groupType) {
       case 'daily':
@@ -520,7 +605,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // สร้างรายการแสดงผลพร้อมหัวข้อกลุ่ม
   List<dynamic> _buildListItems(List<TransactionModel> transactions) {
     if (_groupType == 'none' || transactions.isEmpty) return transactions;
 
@@ -542,7 +626,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return items;
   }
 
-  // สร้างกราฟวงกลมแสดงสัดส่วนหมวดหมู่
   Widget _buildPieChart(List<TransactionModel> transactions) {
     final Map<String, double> categoryTotals = {};
     for (final tx in transactions) {
@@ -598,7 +681,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // สร้างหัวข้อกลุ่มในรายการ
   Widget _buildGroupHeaderWidget(String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 24, right: 16, top: 16, bottom: 4),
@@ -613,7 +695,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // จัดการการลบรายการพร้อมปุ่มเลิกทำ
   void _handleDelete(BuildContext context, TransactionModel tx) {
     setState(() => _pendingDeleteIds.add(tx.id));
     bool isUndone = false;
@@ -664,7 +745,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  // สร้างรายการธุรกรรมแต่ละรายการ
   Widget _buildTransactionItem(BuildContext context, TransactionModel tx) {
     final formattedAmount = NumberFormat('#,##0.00').format(tx.amount);
     final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(tx.date);
@@ -715,6 +795,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(formattedDate),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(_paymentIcons[tx.paymentMethod] ?? Icons.payment,
+                        size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      T.get(tx.paymentMethod),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
                 if (tx.updatedAt != null)
                   Text(
                     '(แก้ไขล่าสุด: ${DateFormat('dd/MM/yyyy HH:mm').format(tx.updatedAt!)})',
@@ -736,7 +828,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // สร้างส่วนเนื้อหาหลักจากข้อมูลธุรกรรม
   Widget _buildContent(List<TransactionModel> allTransactions) {
     final filteredForStats = allTransactions.where((tx) {
       if (_filterType == 'income') return !tx.isExpense;
@@ -815,7 +906,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // สร้างหน้าจอหลัก
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String>(

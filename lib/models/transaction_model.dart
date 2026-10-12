@@ -4,8 +4,9 @@ class TransactionModel {
   final double amount;
   final DateTime date;
   final bool isExpense;
+  final String category;
+  final String paymentMethod;
   final DateTime? updatedAt;
-  final String category; // เพิ่มตัวแปรสำหรับเก็บหมวดหมู่
 
   TransactionModel({
     required this.id,
@@ -13,53 +14,34 @@ class TransactionModel {
     required this.amount,
     required this.date,
     required this.isExpense,
+    required this.category,
+    this.paymentMethod = 'cash',
     this.updatedAt,
-    this.category = 'อื่นๆ', // ตั้งค่าเริ่มต้น
   });
 
-  TransactionModel copyWith({
-    String? id,
-    String? title,
-    double? amount,
-    DateTime? date,
-    bool? isExpense,
-    DateTime? updatedAt,
-    String? category,
-  }) {
+  factory TransactionModel.fromMap(Map<String, dynamic> map) {
     return TransactionModel(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      amount: amount ?? this.amount,
-      date: date ?? this.date,
-      isExpense: isExpense ?? this.isExpense,
-      updatedAt: updatedAt ?? this.updatedAt,
-      category: category ?? this.category, // โคลนค่าหมวดหมู่
+      id: map['id'] ?? '',
+      title: map['title'] ?? '',
+      amount: (map['amount'] as num).toDouble(),
+      date: DateTime.parse(map['date']),
+      isExpense: map['isExpense'] == 1 || map['isExpense'] == true,
+      category: map['category'] ?? 'อื่นๆ',
+      paymentMethod: map['paymentMethod'] ?? 'cash',
+      updatedAt:
+          map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'title': title,
       'amount': amount,
       'date': date.toIso8601String(),
       'isExpense': isExpense ? 1 : 0,
-      'updatedAt': updatedAt?.toIso8601String(),
       'category': category,
+      'paymentMethod': paymentMethod,
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
     };
-  }
-
-  factory TransactionModel.fromMap(Map<String, dynamic> map) {
-    return TransactionModel(
-      id: map['id'],
-      title: map['title'],
-      amount: map['amount'],
-      date: DateTime.parse(map['date']),
-      isExpense: map['isExpense'] == 1,
-      updatedAt: map['updatedAt'] != null
-          ? DateTime.parse(map['updatedAt'])
-          : null,
-      category: map['category'] ?? 'อื่นๆ',
-    );
   }
 }
