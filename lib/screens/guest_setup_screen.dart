@@ -27,9 +27,6 @@ class _GuestSetupScreenState extends State<GuestSetupScreen> {
     }
     setState(() => _busy = true);
     await GuestService.setUsername(name);
-    try {
-      await GuestService.migrateLegacyTransactions();
-    } catch (_) {}
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const DashboardScreen()),
@@ -115,6 +112,15 @@ class _GuestSetupScreenState extends State<GuestSetupScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${T.get('guestIdLabel')} ${GuestService.guestId}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant.withOpacity(0.8),
                       ),
                     ),
                     const SizedBox(height: 32),

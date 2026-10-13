@@ -18,17 +18,14 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     Timer(const Duration(milliseconds: 2500), () async {
-      final hasGuest = await GuestService.load();
-      if (hasGuest) {
-        try {
-          await GuestService.migrateLegacyTransactions();
-        } catch (_) {}
-      }
+      // สุ่ม Guest ID ไม่ซ้ำกันให้เครื่องนี้ (ถ้ายังไม่มี) แล้วค่อยถามชื่อผู้ใช้
+      await GuestService.ensureGuest();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) =>
-              hasGuest ? const DashboardScreen() : const GuestSetupScreen(),
+          builder: (context) => GuestService.hasUsername
+              ? const DashboardScreen()
+              : const GuestSetupScreen(),
         ),
       );
     });

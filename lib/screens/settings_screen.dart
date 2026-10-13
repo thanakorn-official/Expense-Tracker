@@ -819,8 +819,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(T.get('guestMode'),
-            style: const TextStyle(color: Colors.grey, fontSize: 13)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(T.get('guestMode'),
+                style: const TextStyle(color: Colors.grey, fontSize: 13)),
+            const SizedBox(height: 2),
+            Text('${T.get('guestIdLabel')} ${GuestService.guestId}',
+                style: const TextStyle(color: Colors.grey, fontSize: 11)),
+          ],
+        ),
         trailing: IconButton(
           icon: const Icon(Icons.edit_outlined),
           tooltip: T.get('changeUsername'),

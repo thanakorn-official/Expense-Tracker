@@ -83,7 +83,9 @@ class T {
       'thaiLanguage': 'ภาษาไทย',
       'englishLanguage': 'ภาษาอังกฤษ',
       'editItem': 'แก้ไขรายการ',
-      'guestTagline': 'ใส่ชื่อผู้ใช้เพื่อแยกข้อมูลรายรับ-รายจ่ายของแต่ละคน',
+      'guestTagline':
+          'ตั้งชื่อผู้ใช้เพื่อแสดงในแอป — ข้อมูลของคุณจะผูกกับ ID สุ่มเฉพาะของเครื่องนี้ (สร้างให้อัตโนมัติ ไม่ซ้ำกับผู้ใช้อื่น)',
+      'guestIdLabel': 'รหัสผู้ใช้ (สุ่มอัตโนมัติ):',
       'usernameLabel': 'ชื่อผู้ใช้',
       'startButton': 'เริ่มใช้งาน',
       'usernameEmpty': 'กรุณาใส่ชื่อผู้ใช้',
@@ -172,7 +174,9 @@ class T {
       'thaiLanguage': 'Thai',
       'englishLanguage': 'English',
       'editItem': 'Edit Item',
-      'guestTagline': "Enter a username to keep everyone's data separate",
+      'guestTagline':
+          "Pick a display name — your data is bound to a random unique ID generated automatically for this device, so it never collides with anyone else's.",
+      'guestIdLabel': 'Guest ID (auto-generated):',
       'usernameLabel': 'Username',
       'startButton': 'Get Started',
       'usernameEmpty': 'Please enter a username',
