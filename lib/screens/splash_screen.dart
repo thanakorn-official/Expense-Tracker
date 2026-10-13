@@ -1,8 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../main.dart';
+import '../services/auth_service.dart';
 import '../utils/l10n.dart';
 import 'dashboard_screen.dart';
+import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,9 +18,19 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(milliseconds: 2500), () {
+    Timer(const Duration(milliseconds: 2500), () async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        try {
+          await AuthService.migrateLegacyTransactions(user);
+        } catch (_) {}
+      }
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        MaterialPageRoute(
+          builder: (context) =>
+              user == null ? const LoginScreen() : const DashboardScreen(),
+        ),
       );
     });
   }
@@ -92,6 +105,15 @@ class _SplashScreenState extends State<SplashScreen> {
                   ],
                 ),
                 const SizedBox(height: 32),
+                Text(
+                  T.get('appTitle'),
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: Theme.of(context).colorScheme.onBackground,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Text(
                   T.get('loading'),
                   style: TextStyle(

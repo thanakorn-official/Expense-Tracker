@@ -34,11 +34,11 @@ void main() async {
     await prefs.setString('app_theme_mode', themeNotifier.value);
   });
 
-  runApp(const ExpenseTrackerApp());
+  runApp(const KeepTangApp());
 }
 
-class ExpenseTrackerApp extends StatelessWidget {
-  const ExpenseTrackerApp({super.key});
+class KeepTangApp extends StatelessWidget {
+  const KeepTangApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -49,9 +49,7 @@ class ExpenseTrackerApp extends StatelessWidget {
           valueListenable: themeNotifier,
           builder: (context, currentThemeKey, _) {
             return MaterialApp(
-              title: currentLang == 'th'
-                  ? 'บันทึกรายรับ-รายจ่าย'
-                  : 'Expense Tracker',
+              title: currentLang == 'th' ? 'เก็บตัง' : 'KeepTang',
               debugShowCheckedModeBanner: false,
               theme: AppThemes.getTheme(currentThemeKey),
               home: const SplashScreen(),

@@ -1,6 +1,6 @@
 <div align="center">
 
-# 💰 EXPENSE TRACKER
+# 💰 KEEPTANG (เก็บตัง)
 ### แอปพลิเคชันบันทึกและบริหารจัดการรายรับ-รายจ่ายส่วนบุคคล
 
 [![Status](https://img.shields.io/badge/STATUS-COMPLETED-success?style=for-the-badge)]()
@@ -14,7 +14,7 @@
 
 ## 📌 ภาพรวมโปรเจกต์ (Project Overview)
 
-**Expense Tracker** เป็นแอปพลิเคชันมือถือและเว็บสำหรับบันทึกและบริหารจัดการรายรับ-รายจ่ายส่วนบุคคล พัฒนาด้วย **Flutter** และเชื่อมต่อฐานข้อมูลแบบเรียลไทม์ด้วย **Firebase (Cloud Firestore)** เพื่อให้ข้อมูลซิงค์ตรงกันทุกอุปกรณ์อย่างไร้รอยต่อ ตัวแอปถูกออกแบบให้มี UI ที่สะอาดตา รองรับ **Dark Mode** อัตโนมัติตามระบบ พร้อมระบบจัดการหมวดหมู่และช่องทางชำระเงินแบบกำหนดเอง กราฟวงกลมสรุปสัดส่วนการเงิน ระบบเพิ่ม-ลบ-แก้ไขข้อมูล และระบบบันทึกประวัติการแก้ไขล่าสุดอย่างเป็นระบบ 🚀
+**KeepTang (เก็บตัง)** เป็นแอปพลิเคชันมือถือและเว็บสำหรับบันทึกและบริหารจัดการรายรับ-รายจ่ายส่วนบุคคล พัฒนาด้วย **Flutter** และเชื่อมต่อฐานข้อมูลแบบเรียลไทม์ด้วย **Firebase (Cloud Firestore)** เพื่อให้ข้อมูลซิงค์ตรงกันทุกอุปกรณ์อย่างไร้รอยต่อ พร้อมระบบบัญชีผู้ใช้เข้าสู่ระบบผ่าน **Facebook** และ **Google** (Firebase Authentication) ที่แยกข้อมูลส่วนตัวของแต่ละบัญชีอย่างปลอดภัย ตัวแอปถูกออกแบบให้มี UI ที่สะอาดตา รองรับ **Dark Mode** อัตโนมัติตามระบบ พร้อมระบบจัดการหมวดหมู่และช่องทางชำระเงินแบบกำหนดเอง กราฟวงกลมสรุปสัดส่วนการเงิน ระบบเพิ่ม-ลบ-แก้ไขข้อมูล และระบบบันทึกประวัติการแก้ไขล่าสุดอย่างเป็นระบบ 🚀
 
 ---
 
@@ -31,6 +31,7 @@
 
 ## ✨ ฟีเจอร์หลัก (Key Features)
 
+* **User Accounts:** ระบบบัญชีผู้ใช้เข้าสู่ระบบด้วย **Facebook** และ **Google** (Firebase Authentication) แยกข้อมูลรายรับ-รายจ่ายของแต่ละบัญชีแบบเป็นส่วนตัว
 * **Transaction Management:** บันทึก แก้ไข และลบรายการ (ระบบ Swipe-to-Delete พร้อมปุ่ม Undo)
 * **Time-based Grouping & Scoping:** จัดกลุ่มและกรองข้อมูลตามช่วงเวลา (รายวัน, รายสัปดาห์, รายเดือน, รายปี)
 * **Advanced Filtering:** กรองข้อมูลตามประเภท (รายรับ/รายจ่าย) และช่องทางการชำระเงิน
@@ -44,14 +45,32 @@
 ## 📂 โครงสร้างโปรเจกต์ (Project Structure)
 
 ```text
-Expense_Tracker/
+KeepTang/
 ├── android/            # การตั้งค่าระบบ Android และ App Icon
 ├── ios/                # การตั้งค่าระบบ iOS
 ├── assets/             # จัดเก็บไฟล์ภาพและโลโก้
 ├── lib/                # ซอร์สโค้ดหลักของแอปพลิเคชัน
 │   ├── models/         # โครงสร้างข้อมูล (transaction_model.dart)
-│   ├── screens/        # หน้าจอการใช้งาน (dashboard_screen.dart, settings_screen.dart)
+│   ├── screens/        # หน้าจอการใช้งาน (dashboard_screen.dart, login_screen.dart, settings_screen.dart)
+│   ├── services/       # ระบบบัญชีและการย้ายข้อมูล (auth_service.dart)
 │   ├── utils/          # ระบบจัดการภาษาและโลแคล (l10n.dart)
 │   └── main.dart       # จุดเริ่มต้นและระบบธีมหลักของแอปพลิเคชัน
 ├── pubspec.yaml        # รายการแพ็กเกจและตั้งค่า Asset
 └── README.md           # รายละเอียดโปรเจกต์
+```
+
+---
+
+## 🔐 ระบบบัญชี (Facebook / Google)
+
+แอปใช้ **Firebase Authentication** เข้าสู่ระบบด้วย Facebook และ Google (สมัครอัตโนมัติเมื่อล็อกอินครั้งแรก) ข้อมูลรายรับ-รายจ่ายถูกเก็บที่ `users/{uid}/transactions`
+
+เปิดใช้งานใน [Firebase Console](https://console.firebase.google.com/) โปรเจกต์ `expense-tracker-b6ec8`:
+
+1. **Authentication → Sign-in method → Google** → Enable
+2. **Authentication → Sign-in method → Facebook** → Enable แล้วใส่ App ID และ App Secret จาก [Meta for Developers](https://developers.facebook.com/apps)
+3. เพิ่มโดเมน (เช่น `localhost`) ใน **Authorized domains**
+4. สำหรับ Android: เพิ่ม SHA-1 ของเครื่องใน **Project settings → Your apps**
+5. Deploy กติกา Firestore: `firebase deploy --only firestore:rules`
+
+หน้าจอแรกของแอปคือล็อกอิน ถ้ายังไม่เข้าสู่ระบบจะเข้าแอปไม่ได้

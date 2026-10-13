@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import '../models/transaction_model.dart';
 import '../main.dart';
 import '../utils/l10n.dart';
+import 'login_screen.dart';
 import 'settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -112,8 +114,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ];
 
   final Set<String> _pendingDeleteIds = {};
-  final CollectionReference _transactionsCollection =
-      FirebaseFirestore.instance.collection('transactions');
+
+  // รายการธุรกรรมแยกตามบัญชีที่ล็อกอินอยู่ users/{uid}/transactions
+  CollectionReference get _transactionsCollection => FirebaseFirestore.instance
+      .collection('users')
+      .doc(FirebaseAuth.instance.currentUser!.uid)
+      .collection('transactions');
 
   String _groupType = 'monthly';
   String _filterType = 'all';
@@ -1341,6 +1347,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (FirebaseAuth.instance.currentUser == null) {
+      return const LoginScreen();
+    }
     return ValueListenableBuilder<String>(
       valueListenable: languageNotifier,
       builder: (context, currentLang, child) {
@@ -1372,7 +1381,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return Center(child: Text(T.get('loadError')));
                 }
 
                 final allTransactions = snapshot.data!.docs

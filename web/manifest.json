@@ -1,11 +1,11 @@
 {
-    "name": "expense_tracker",
-    "short_name": "expense_tracker",
+    "name": "KeepTang (เก็บตัง)",
+    "short_name": "KeepTang",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "KeepTang (เก็บตัง) — แอปบันทึกรายรับ-รายจ่ายส่วนบุคคล",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

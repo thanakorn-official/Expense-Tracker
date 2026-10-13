@@ -3,7 +3,7 @@ import '../main.dart';
 class T {
   static const Map<String, Map<String, String>> _dict = {
     'th': {
-      'appTitle': 'บันทึกรายรับ-รายจ่าย',
+      'appTitle': 'เก็บตัง',
       'totalIncome': 'รายรับรวม',
       'balance': 'ยอดคงเหลือ',
       'totalExpense': 'รายจ่ายรวม',
@@ -63,9 +63,10 @@ class T {
       'language': 'ภาษา',
       'theme': 'ธีมหน้าจอ',
       'about': 'เกี่ยวกับแอป',
-      'app_version': 'เวอร์ชัน 1.1.0',
+      'app_version': 'เวอร์ชัน 1.2.0',
       'about_desc':
-          'แอปพลิเคชันจัดการการเงินส่วนบุคคล พัฒนาด้วย Flutter และ Firebase เพื่อให้คุณติดตามรายรับ-รายจ่ายได้อย่างมีประสิทธิภาพ',
+          'KeepTang (เก็บตัง) แอปจัดการการเงินส่วนบุคคล พัฒนาด้วย Flutter และ Firebase เพื่อติดตามรายรับ-รายจ่ายได้อย่างมีประสิทธิภาพ',
+      'account': 'บัญชีผู้ใช้',
       'manageCategories': 'จัดการหมวดหมู่',
       'managePayments': 'จัดการช่องทางชำระเงิน',
       'addCategory': 'เพิ่มหมวดหมู่ใหม่',
@@ -82,9 +83,15 @@ class T {
       'thaiLanguage': 'ภาษาไทย',
       'englishLanguage': 'ภาษาอังกฤษ',
       'editItem': 'แก้ไขรายการ',
+      'loginTagline': 'ล็อกอินเพื่อซิงก์และสำรองรายรับ-รายจ่ายของคุณ',
+      'signInFacebook': 'เข้าสู่ระบบด้วย Facebook',
+      'signInGoogle': 'เข้าสู่ระบบด้วย Google',
+      'loginFailed': 'เข้าสู่ระบบไม่สำเร็จ',
+      'logout': 'ออกจากระบบ',
+      'loadError': 'โหลดข้อมูลไม่สำเร็จ',
     },
     'en': {
-      'appTitle': 'Expense Tracker',
+      'appTitle': 'KeepTang',
       'totalIncome': 'Total Income',
       'balance': 'Balance',
       'totalExpense': 'Total Expense',
@@ -144,9 +151,10 @@ class T {
       'language': 'Language',
       'theme': 'App Theme',
       'about': 'About App',
-      'app_version': 'Version 1.1.0',
+      'app_version': 'Version 1.2.0',
       'about_desc':
-          'A personal finance management app built with Flutter and Firebase to help you track your income and expenses efficiently.',
+          'KeepTang (เก็บตัง) is a personal finance app built with Flutter and Firebase to track income and expenses.',
+      'account': 'Account',
       'manageCategories': 'Manage Categories',
       'managePayments': 'Manage Payment Methods',
       'addCategory': 'Add New Category',
@@ -163,6 +171,12 @@ class T {
       'thaiLanguage': 'Thai',
       'englishLanguage': 'English',
       'editItem': 'Edit Item',
+      'loginTagline': 'Sign in to sync and back up your transactions',
+      'signInFacebook': 'Continue with Facebook',
+      'signInGoogle': 'Continue with Google',
+      'loginFailed': 'Sign-in failed',
+      'logout': 'Sign out',
+      'loadError': 'Could not load data',
     }
   };
 
