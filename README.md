@@ -1,76 +1,165 @@
 <div align="center">
 
-# 💰 KEEPTANG (เก็บตัง)
-### แอปพลิเคชันบันทึกและบริหารจัดการรายรับ-รายจ่ายส่วนบุคคล
+<img src="assets/logo.png" alt="KeepTang Logo" width="120"/>
 
-[![Status](https://img.shields.io/badge/STATUS-COMPLETED-success?style=for-the-badge)]()
-[![Platform](https://img.shields.io/badge/PLATFORM-ANDROID%20%2F%20WEB-blue?style=for-the-badge)]()
-[![Framework](https://img.shields.io/badge/FRAMEWORK-FLUTTER-informational?style=for-the-badge)]()
-[![Database](https://img.shields.io/badge/DATABASE-FIREBASE-orange?style=for-the-badge)]()
+# 💰 เก็บตัง — KeepTang
+
+**แอปบันทึกรายรับ-รายจ่ายส่วนบุคคล ที่ใช้งานง่าย ไม่ต้องสมัครบัญชี**
+
+[![Version](https://img.shields.io/badge/version-1.3.0-blue?style=for-the-badge)]()
+[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-02569B?style=for-the-badge&logo=flutter)]()
+[![Framework](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)]()
+[![Database](https://img.shields.io/badge/Cloud%20Firestore-Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)]()
+[![License](https://img.shields.io/badge/license-Proprietary-grey?style=for-the-badge)]()
 
 </div>
 
 ---
 
-## 📌 ภาพรวมโปรเจกต์ (Project Overview)
+## 📌 เกี่ยวกับแอป
 
-**KeepTang (เก็บตัง)** เป็นแอปพลิเคชันมือถือและเว็บสำหรับบันทึกและบริหารจัดการรายรับ-รายจ่ายส่วนบุคคล พัฒนาด้วย **Flutter** และเชื่อมต่อฐานข้อมูลแบบเรียลไทม์ด้วย **Firebase (Cloud Firestore)** เพื่อให้ข้อมูลซิงค์ตรงกันทุกอุปกรณ์อย่างไร้รอยต่อ พร้อมโหมดผู้ใช้ทั่วไป (Guest) ที่แยกข้อมูลของแต่ละคนด้วยชื่อผู้ใช้ ตัวแอปถูกออกแบบให้มี UI ที่สะอาดตา รองรับ **Dark Mode** อัตโนมัติตามระบบ พร้อมระบบจัดการหมวดหมู่และช่องทางชำระเงินแบบกำหนดเอง กราฟวงกลมสรุปสัดส่วนการเงิน ระบบเพิ่ม-ลบ-แก้ไขข้อมูล และระบบบันทึกประวัติการแก้ไขล่าสุดอย่างเป็นระบบ 🚀
+**KeepTang (เก็บตัง)** เป็นแอปจัดการการเงินส่วนบุคคล พัฒนาด้วย **Flutter** และเก็บข้อมูลบน **Firebase Cloud Firestore** แบบเรียลไทม์ ใช้งานได้ทันทีโดยไม่ต้องสมัครบัญชี — เปิดแอป ตั้งชื่อผู้ใช้ แล้วเริ่มจดเงินได้เลย
 
----
-
-## 🛠 เทคโนโลยีที่ใช้ (Tech Stack)
-
-* **Core Framework:** Flutter (Dart) 💙
-* **Cloud Database:** Firebase Cloud Firestore (Real-time Sync) 🔥
-* **Data Visualization:** FL Chart (Circular / Pie Chart) 📊
-* **Local Storage:** SharedPreferences (Custom Categories & Payment Methods) 💾
-* **UI & Localization:** Intl & Material Design 3 with Multi-language Support (TH/EN) 🌐
-* **Version Control:** Git & GitHub 🐙
+> 🆔 **ไม่มีระบบล็อกอิน ไม่มีการสมัครสมาชิก** — แต่ละเครื่องจะได้ **Guest ID แบบสุ่มที่ไม่ซ้ำกับใคร** โดยอัตโนมัติ ส่วนชื่อผู้ใช้เป็นเพียงชื่อแสดงผลที่เปลี่ยนได้อิสระ
 
 ---
 
-## ✨ ฟีเจอร์หลัก (Key Features)
+## ✨ ฟีเจอร์หลัก
 
-* **Guest Profiles:** โหมดผู้ใช้ทั่วไป ตั้งชื่อผู้ใช้ (Username) ได้ทันทีโดยไม่ต้องสมัครบัญชี และข้อมูลรายรับ-รายจ่ายแยกเป็นพื้นที่ของตัวเองตามชื่อผู้ใช้ (ID แยกกันทุกคน)
-* **Transaction Management:** บันทึก แก้ไข และลบรายการ (ระบบ Swipe-to-Delete พร้อมปุ่ม Undo)
-* **Time-based Grouping & Scoping:** จัดกลุ่มและกรองข้อมูลตามช่วงเวลา (รายวัน, รายสัปดาห์, รายเดือน, รายปี)
-* **Advanced Filtering:** กรองข้อมูลตามประเภท (รายรับ/รายจ่าย) และช่องทางการชำระเงิน
-* **Custom Categories & Payment Methods:** เพิ่มหมวดหมู่และช่องทางชำระเงินใหม่ได้เองพร้อมบันทึกค่า
-* **Financial Analytics:** กราฟวงกลม (Pie Chart) แสดงสัดส่วนค่าใช้จ่ายตามหมวดหมู่แบบเรียลไทม์
-* **Localization:** รองรับการเปลี่ยนภาษา (ไทย / อังกฤษ) ทั่วทั้งแอป
-* **Theme Support:** รองรับโหมดสว่างและโหมดมืด (Light / Dark Theme) ตามระบบ
+| ฟีเจอร์ | รายละเอียด |
+|---|---|
+| 🆔 **Guest ID สุ่มไม่ซ้ำ** | แต่ละเครื่องได้ ID เฉพาะ (เช่น `G-mdef4k2x7q3z`) สร้างอัตโนมัติ ตรวจซ้ำกับฐานข้อมูลก่อนใช้เสมอ — คนละเครื่องคือคนละพื้นที่ข้อมูล แม้ตั้งชื่อผู้ใช้เหมือนกัน |
+| ✏️ **ชื่อผู้ใช้เปลี่ยนได้อิสระ** | ชื่อผู้ใช้เป็นแค่ชื่อแสดงผล แก้ได้ทุกเมื่อในหน้าตั้งค่า โดยไม่กระทบข้อมูลเดิมแม้แต่รายการเดียว |
+| 💸 **บันทึกรายรับ-รายจ่าย** | เพิ่ม แก้ไข ลบรายการ พร้อมระบบปัดเพื่อลบ (Swipe-to-Delete) และปุ่มเลิกทำ (Undo) |
+| 📊 **กราฟวงกลม** | แสดงสัดส่วนค่าใช้จ่ายแยกตามหมวดหมู่ พร้อมไอคอนและเปอร์เซ็นต์ในตัว |
+| 🗂 **จัดกลุ่มและกรอง** | จัดกลุ่มตามวัน/สัปดาห์/เดือน/ปี กรองตามประเภทรายการและช่องทางชำระเงิน เรียงใหม่-เก่า-มาก-น้อยได้ |
+| 🎨 **หมวดหมู่และช่องทางชำระเงินแบบกำหนดเอง** | เพิ่ม/แก้ไข/ลบได้เอง พร้อมเลือกไอคอนและสีประจำรายการ |
+| 🌐 **สองภาษา** | ไทย / อังกฤษ เปลี่ยนได้ทันทีทั่วทั้งแอป |
+| 🌗 **ธีมสว่าง-มืด** | เลือก Light / Dark ได้ตามใจชอบ |
 
 ---
 
-## 📂 โครงสร้างโปรเจกต์ (Project Structure)
+## 🛠 เทคโนโลยีที่ใช้
+
+- **Flutter (Dart)** — โครงสร้าง UI และ state management แบบเรียบง่าย
+- **Firebase Cloud Firestore** — ฐานข้อมูลเรียลไทม์ ซิงค์ข้อมูลทันที
+- **FL Chart** — กราฟวงกลมสรุปสัดส่วนการเงิน
+- **SharedPreferences** — เก็บ Guest ID, ชื่อผู้ใช้, ธีม, ภาษา และหมวดหมู่ที่กำหนดเอง
+- **Material Design 3** — ดีไซน์ร่วมสมัย รองรับทั้งโหมดสว่างและมืด
+
+---
+
+## 🆔 ระบบตัวตนแบบ Guest
+
+แอปตัดระบบล็อกอิน Facebook/Google ออกทั้งหมด แล้วใช้ระบบ Guest ที่ทำงานดังนี้
+
+1. **เปิดแอปครั้งแรก** — ระบบสุ่ม Guest ID รูปแบบ `G-` + เวลา (base36) + ตัวอักษรสุ่ม 4 ตัว แล้วตรวจกับ Firestore ว่าไม่มีใครใช้ ID นี้ก่อน (ถ้าออฟไลน์จะใช้ค่าที่สุ่มได้ทันที เพราะโอกาสชนกันแทบเป็นศูนย์)
+2. **ตั้งชื่อผู้ใช้** — ชื่อนี้เป็นแค่ชื่อแสดงผลเท่านั้น ไม่ได้ผูกกับพื้นที่ข้อมูล
+3. **เปลี่ยนชื่อเมื่อไหร่ก็ได้** — ข้อมูลทั้งหมดยังอยู่กับ Guest ID เดิมของเครื่อง
+
+### โครงสร้างข้อมูลบน Firestore
+
+```text
+guests/{guestId}                  ← ID สุ่มไม่ซ้ำ เช่น G-mdef4k2x7q3z
+├── username: "สมชาย"            ← ชื่อแสดงผล (แก้ได้อิสระ)
+├── createdAt: <serverTimestamp>
+└── transactions/{docId}
+    ├── title:        "ค่ากาแฟ"
+    ├── amount:       55.0
+    ├── date:         "2026-10-14T09:30:00.000"
+    ├── isExpense:    1
+    ├── category:     "อาหาร"
+    ├── paymentMethod: "cash"
+    └── updatedAt:    "2026-10-14T12:00:00.000"   (เฉพาะรายการที่แก้ไขแล้ว)
+```
+
+> 🔄 **อัปเกรดจากเวอร์ชันเก่าอัตโนมัติ** — เครื่องที่เคยใช้เวอร์ชันที่ใช้ "ชื่อผู้ใช้เป็น ID" จะถูกคัดลอกข้อมูลจากพื้นที่เดิม (`guests/{ชื่อผู้ใช้}`) มายัง ID สุ่มใหม่โดยอัตโนมัติเมื่อเปิดแอปครั้งแรก (คัดลอกเท่านั้น ไม่ลบข้อมูลเดิม)
+
+---
+
+## 📂 โครงสร้างโปรเจกต์
 
 ```text
 KeepTang/
-├── android/            # การตั้งค่าระบบ Android และ App Icon
-├── ios/                # การตั้งค่าระบบ iOS
-├── assets/             # จัดเก็บไฟล์ภาพและโลโก้
-├── lib/                # ซอร์สโค้ดหลักของแอปพลิเคชัน
-│   ├── models/         # โครงสร้างข้อมูล (transaction_model.dart)
-│   ├── screens/        # หน้าจอการใช้งาน (dashboard_screen.dart, login_screen.dart, settings_screen.dart)
-│   ├── services/       # ระบบบัญชีและการย้ายข้อมูล (auth_service.dart)
-│   ├── utils/          # ระบบจัดการภาษาและโลแคล (l10n.dart)
-│   └── main.dart       # จุดเริ่มต้นและระบบธีมหลักของแอปพลิเคชัน
-├── pubspec.yaml        # รายการแพ็กเกจและตั้งค่า Asset
-└── README.md           # รายละเอียดโปรเจกต์
+├── android/                 # การตั้งค่าระบบ Android (รวม google-services.json)
+├── ios/                     # การตั้งค่าระบบ iOS
+├── assets/                  # โลโก้และไฟล์ภาพ
+├── lib/                     # ซอร์สโค้ดหลักของแอป
+│   ├── main.dart            # จุดเริ่มต้น, ตั้งค่า Firebase, ธีม และภาษา
+│   ├── firebase_options.dart
+│   ├── models/
+│   │   └── transaction_model.dart     # โครงสร้างข้อมูลรายรับ-รายจ่าย
+│   ├── screens/
+│   │   ├── splash_screen.dart         # หน้าเริ่ม — สุ่ม Guest ID แล้วเลือกเส้นทาง
+│   │   ├── guest_setup_screen.dart    # หน้าตั้งชื่อผู้ใช้ครั้งแรก
+│   │   ├── dashboard_screen.dart      # หน้าหลัก — สรุปยอด, กราฟ, รายการ, ตัวกรอง
+│   │   └── settings_screen.dart       # ตั้งค่า — ชื่อผู้ใช้, หมวดหมู่, ธีม, ภาษา
+│   ├── services/
+│   │   └── guest_service.dart         # Guest ID สุ่มไม่ซ้ำ + ย้ายข้อมูลเก่าอัตโนมัติ
+│   └── utils/
+│       └── l10n.dart                  # คำแปลไทย/อังกฤษทั้งแอป
+├── firestore.rules          # กติกาความปลอดภัยของ Firestore
+├── pubspec.yaml             # รายการแพ็กเกจและทรัพยากร
+└── README.md
 ```
 
 ---
 
-## 🔐 ระบบบัญชี (Facebook / Google)
+## 🚀 เริ่มต้นใช้งาน
 
-แอปใช้ **Firebase Authentication** เข้าสู่ระบบด้วย Facebook และ Google (สมัครอัตโนมัติเมื่อล็อกอินครั้งแรก) ข้อมูลรายรับ-รายจ่ายถูกเก็บที่ `users/{uid}/transactions`
+### สิ่งที่ต้องมี
 
-เปิดใช้งานใน [Firebase Console](https://console.firebase.google.com/) โปรเจกต์ `expense-tracker-b6ec8`:
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) (ช่องทาง stable ล่าสุด)
+- บัญชี [Firebase](https://console.firebase.google.com/) พร้อมสร้างโปรเจกต์และเปิดใช้ **Cloud Firestore**
 
-1. **Authentication → Sign-in method → Google** → Enable
-2. **Authentication → Sign-in method → Facebook** → Enable แล้วใส่ App ID และ App Secret จาก [Meta for Developers](https://developers.facebook.com/apps)
-3. เพิ่มโดเมน (เช่น `localhost`) ใน **Authorized domains**
-4. สำหรับ Android: เพิ่ม SHA-1 ของเครื่องใน **Project settings → Your apps**
-5. Deploy กติกา Firestore: `firebase deploy --only firestore:rules`
+### ติดตั้งและรัน
 
-หน้าจอแรกของแอปคือล็อกอิน ถ้ายังไม่เข้าสู่ระบบจะเข้าแอปไม่ได้
+```bash
+# 1. โคลนโปรเจกต์
+git clone https://github.com/thanakorn-official/KeepTang.git
+cd KeepTang
+
+# 2. ติดตั้งแพ็กเกจ
+flutter pub get
+
+# 3. ตั้งค่า Firebase สำหรับโปรเจกต์ของคุณ (สร้าง firebase_options.dart)
+dart pub global activate flutterfire_cli
+flutterfire configure
+
+# 4. รันแอป
+flutter run
+```
+
+> 💡 repo นี้แนบไฟล์ config ของ Firebase โปรเจกต์เดิมมาด้วย (`android/app/google-services.json` และ `lib/firebase_options.dart`) ถ้าต้องการใช้ Firebase โปรเจกต์ของตัวเอง ให้รัน `flutterfire configure` ทับ แล้วไฟล์ config ทั้งหมดจะถูกสร้างใหม่ให้อัตโนมัติ
+
+### ตั้งค่า Firestore Rules
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+### สร้างไฟล์ Release
+
+```bash
+flutter build apk --release        # Android APK
+flutter build web                  # เว็บแอป
+```
+
+---
+
+## 🗺 แนวทางพัฒนาต่อ
+
+- [ ] ส่งออก/นำเข้าข้อมูล (CSV) เพื่อย้ายเครื่องหรือสำรองข้อมูล
+- [ ] โหมดผู้พิทักษ์ — ลิงก์ Guest ID เข้ากับบัญชีเพื่อกู้คืนข้อมูลข้ามเครื่อง
+- [ ] แจ้งเตือนบันทึกรายการรายวัน
+- [ ] วิดเจ็ตหน้าจอหลักสำหรับเพิ่มรายการด่วน
+
+---
+
+<div align="center">
+
+**KeepTang (เก็บตัง)** — เก็บทุกบาท ให้ครบทุกตัง 💰
+
+Made with 💙 Flutter
+
+</div>
