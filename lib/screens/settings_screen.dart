@@ -626,13 +626,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: Colors.red,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.delete, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text('ลบ',
-                              style: TextStyle(
+                          const Icon(Icons.delete, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Text(T.get('delete'),
+                              style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold)),
                         ],
@@ -715,13 +715,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: Colors.red,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.delete, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text('ลบ',
-                              style: TextStyle(
+                          const Icon(Icons.delete, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Text(T.get('delete'),
+                              style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold)),
                         ],
@@ -797,6 +797,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onTap: _openManagePaymentsScreen,
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                child: ListTile(
+                  leading: const Icon(Icons.palette_outlined),
+                  title: Text(T.get('theme')),
+                  trailing: ValueListenableBuilder<String>(
+                    valueListenable: themeNotifier,
+                    builder: (context, currentTheme, _) {
+                      return DropdownButton<String>(
+                        value: currentTheme,
+                        underline: const SizedBox(),
+                        items: [
+                          DropdownMenuItem(
+                              value: 'light', child: Text(T.get('lightMode'))),
+                          DropdownMenuItem(
+                              value: 'dark', child: Text(T.get('darkMode'))),
+                          DropdownMenuItem(
+                              value: 'black_cat',
+                              child: Text(T.get('blackCat'))),
+                          DropdownMenuItem(
+                              value: 'glass_cup',
+                              child: Text(T.get('glassCup'))),
+                        ],
+                        onChanged: (val) async {
+                          if (val != null) {
+                            themeNotifier.value = val;
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setString('app_theme_mode', val);
+                          }
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
