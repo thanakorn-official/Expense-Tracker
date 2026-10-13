@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import '../models/transaction_model.dart';
 import '../main.dart';
+import '../services/guest_service.dart';
 import '../utils/l10n.dart';
-import 'login_screen.dart';
 import 'settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -115,10 +114,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final Set<String> _pendingDeleteIds = {};
 
-  // รายการธุรกรรมแยกตามบัญชีที่ล็อกอินอยู่ users/{uid}/transactions
+  // รายการธุรกรรมแยกตามผู้ใช้ guests/{guestId}/transactions
   CollectionReference get _transactionsCollection => FirebaseFirestore.instance
-      .collection('users')
-      .doc(FirebaseAuth.instance.currentUser!.uid)
+      .collection('guests')
+      .doc(GuestService.guestId)
       .collection('transactions');
 
   String _groupType = 'monthly';
@@ -1347,9 +1346,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (FirebaseAuth.instance.currentUser == null) {
-      return const LoginScreen();
-    }
     return ValueListenableBuilder<String>(
       valueListenable: languageNotifier,
       builder: (context, currentLang, child) {

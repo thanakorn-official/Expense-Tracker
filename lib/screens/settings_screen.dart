@@ -3,9 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import '../main.dart';
-import '../services/auth_service.dart';
+import '../services/guest_service.dart';
 import '../utils/l10n.dart';
-import 'login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -764,61 +763,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _signOut() async {
-    await AuthService.signOut();
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-      (route) => false,
+  Future<void> _changeUsername() async {
+    final controller = TextEditingController(text: GuestService.username);
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(T.get('changeUsername')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 30,
+          decoration: InputDecoration(
+            labelText: T.get('usernameLabel'),
+            prefixIcon: const Icon(Icons.person_outline),
+            counterText: '',
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(T.get('cancel'))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(T.get('save')),
+          ),
+        ],
+      ),
     );
+    if (saved != true) return;
+    final name = controller.text.trim();
+    if (name.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(T.get('usernameEmpty'))),
+        );
+      }
+      return;
+    }
+    await GuestService.setUsername(name);
+    setState(() {});
   }
 
-  Widget _buildAccountCard() {
-    final user = AuthService.currentUser;
-    if (user == null) return const SizedBox.shrink();
-    final photoUrl = user.photoURL;
-    final displayName = user.displayName ?? user.email ?? 'KeepTang';
+  Widget _buildGuestCard() {
+    final name = GuestService.username ?? '';
+    final initial = name.isNotEmpty ? name.characters.first.toUpperCase() : '?';
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-              child: photoUrl == null
-                  ? Text(
-                      displayName.characters.first.toUpperCase(),
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 18),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  if (user.email != null && user.email != displayName)
-                    Text(user.email!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            const TextStyle(color: Colors.grey, fontSize: 13)),
-                ],
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout, color: Colors.redAccent),
-              tooltip: T.get('logout'),
-              onPressed: _signOut,
-            ),
-          ],
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          child: Text(initial,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        ),
+        title: Text(name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(T.get('guestMode'),
+            style: const TextStyle(color: Colors.grey, fontSize: 13)),
+        trailing: IconButton(
+          icon: const Icon(Icons.edit_outlined),
+          tooltip: T.get('changeUsername'),
+          onPressed: _changeUsername,
         ),
       ),
     );
@@ -843,7 +849,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              _buildAccountCard(),
+              _buildGuestCard(),
               const SizedBox(height: 16),
               Card(
                 elevation: 2,

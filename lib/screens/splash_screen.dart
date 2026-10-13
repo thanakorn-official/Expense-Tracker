@@ -1,11 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../main.dart';
-import '../services/auth_service.dart';
+import '../services/guest_service.dart';
 import '../utils/l10n.dart';
 import 'dashboard_screen.dart';
-import 'login_screen.dart';
+import 'guest_setup_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -19,17 +18,17 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     Timer(const Duration(milliseconds: 2500), () async {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
+      final hasGuest = await GuestService.load();
+      if (hasGuest) {
         try {
-          await AuthService.migrateLegacyTransactions(user);
+          await GuestService.migrateLegacyTransactions();
         } catch (_) {}
       }
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) =>
-              user == null ? const LoginScreen() : const DashboardScreen(),
+              hasGuest ? const DashboardScreen() : const GuestSetupScreen(),
         ),
       );
     });
