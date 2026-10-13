@@ -51,8 +51,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'promptpay': Icons.account_balance_wallet_outlined,
     'truemoney': Icons.account_balance_wallet,
     'paotang': Icons.wallet,
-    'creditCard': Icons.credit_card,
-    'bankTransfer': Icons.account_balance,
+  };
+
+  final Map<String, Color> _paymentColors = {
+    'cash': Colors.green,
+    'promptpay': Colors.blue,
+    'truemoney': Colors.orange,
+    'paotang': Colors.lightBlue,
   };
 
   final List<Color> _availableColors = [
@@ -66,6 +71,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Colors.amber,
     Colors.cyan,
     Colors.indigo,
+    Colors.brown,
+    Colors.blueGrey,
+  ];
+
+  final List<IconData> _selectableCategoryIcons = [
+    Icons.restaurant,
+    Icons.directions_car,
+    Icons.shopping_bag,
+    Icons.receipt,
+    Icons.account_balance_wallet,
+    Icons.movie,
+    Icons.medical_services,
+    Icons.home,
+    Icons.school,
+    Icons.trending_up,
+    Icons.pets,
+    Icons.fitness_center,
+    Icons.flight,
+    Icons.sports_esports,
+    Icons.phone_android,
+    Icons.build,
+    Icons.card_giftcard,
+    Icons.category,
+  ];
+
+  final List<IconData> _selectablePaymentIcons = [
+    Icons.payments_outlined,
+    Icons.account_balance_wallet_outlined,
+    Icons.account_balance_wallet,
+    Icons.wallet,
+    Icons.credit_card,
+    Icons.account_balance,
+    Icons.qr_code_scanner,
+    Icons.contactless,
+    Icons.currency_exchange,
+    Icons.monetization_on,
+    Icons.card_membership,
+    Icons.store,
   ];
 
   final Set<String> _pendingDeleteIds = {};
@@ -83,6 +126,94 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadCustomSettings();
   }
 
+  IconData _getDefaultCategoryIcon(String cat) {
+    switch (cat) {
+      case 'อาหาร':
+        return Icons.restaurant;
+      case 'เดินทาง':
+        return Icons.directions_car;
+      case 'ช้อปปิ้ง':
+        return Icons.shopping_bag;
+      case 'บิล/ค่าใช้จ่าย':
+        return Icons.receipt;
+      case 'เงินเดือน/รายรับ':
+        return Icons.account_balance_wallet;
+      case 'ความบันเทิง':
+        return Icons.movie;
+      case 'สุขภาพ/พยาบาล':
+        return Icons.medical_services;
+      case 'ที่อยู่อาศัย':
+        return Icons.home;
+      case 'การศึกษา':
+        return Icons.school;
+      case 'การลงทุน':
+        return Icons.trending_up;
+      case 'อื่นๆ':
+        return Icons.category;
+      default:
+        return Icons.label;
+    }
+  }
+
+  Color _getDefaultCategoryColor(String cat) {
+    switch (cat) {
+      case 'อาหาร':
+        return Colors.orange;
+      case 'เดินทาง':
+        return Colors.blue;
+      case 'ช้อปปิ้ง':
+        return Colors.purple;
+      case 'บิล/ค่าใช้จ่าย':
+        return Colors.redAccent;
+      case 'เงินเดือน/รายรับ':
+        return Colors.green;
+      case 'ความบันเทิง':
+        return Colors.pink;
+      case 'สุขภาพ/พยาบาล':
+        return Colors.cyan;
+      case 'ที่อยู่อาศัย':
+        return Colors.brown;
+      case 'การศึกษา':
+        return Colors.indigo;
+      case 'การลงทุน':
+        return Colors.teal;
+      case 'อื่นๆ':
+        return Colors.blueGrey;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  IconData _getDefaultPaymentIcon(String pay) {
+    switch (pay) {
+      case 'cash':
+        return Icons.payments_outlined;
+      case 'promptpay':
+        return Icons.account_balance_wallet_outlined;
+      case 'truemoney':
+        return Icons.account_balance_wallet;
+      case 'paotang':
+        return Icons.wallet;
+      default:
+        return Icons.payment;
+    }
+  }
+
+  Color _getDefaultPaymentColor(String pay) {
+    switch (pay) {
+      case 'cash':
+        return Colors.green;
+      case 'promptpay':
+        return Colors.blue;
+      case 'truemoney':
+        return Colors.orange;
+      case 'paotang':
+        return Colors.lightBlue;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
   Future<void> _loadCustomSettings() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -91,10 +222,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final List<dynamic> decoded = jsonDecode(customCats);
       setState(() {
         _categoryIcons.clear();
+        _categoryColors.clear();
         for (var item in decoded) {
           final cat = item.toString();
-          _categoryIcons[cat] = Icons.label;
-          _categoryColors.putIfAbsent(cat, () => Colors.blueGrey);
+          _categoryIcons[cat] = _getDefaultCategoryIcon(cat);
+          _categoryColors[cat] = _getDefaultCategoryColor(cat);
+        }
+      });
+    }
+
+    final catIconsStr = prefs.getString('app_category_icon_codes');
+    if (catIconsStr != null) {
+      final Map<String, dynamic> decoded = jsonDecode(catIconsStr);
+      decoded.forEach((k, v) {
+        if (_categoryIcons.containsKey(k)) {
+          _categoryIcons[k] = IconData(v as int, fontFamily: 'MaterialIcons');
+        }
+      });
+    }
+
+    final catColorsStr = prefs.getString('app_category_color_values');
+    if (catColorsStr != null) {
+      final Map<String, dynamic> decoded = jsonDecode(catColorsStr);
+      decoded.forEach((k, v) {
+        if (_categoryColors.containsKey(k)) {
+          _categoryColors[k] = Color(v as int);
         }
       });
     }
@@ -104,95 +256,330 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final List<dynamic> decoded = jsonDecode(customPayments);
       setState(() {
         _paymentIcons.clear();
+        _paymentColors.clear();
         for (var item in decoded) {
           final pay = item.toString();
-          _paymentIcons[pay] = Icons.payment;
+          _paymentIcons[pay] = _getDefaultPaymentIcon(pay);
+          _paymentColors[pay] = _getDefaultPaymentColor(pay);
+        }
+      });
+    }
+
+    final payIconsStr = prefs.getString('app_payment_icon_codes');
+    if (payIconsStr != null) {
+      final Map<String, dynamic> decoded = jsonDecode(payIconsStr);
+      decoded.forEach((k, v) {
+        if (_paymentIcons.containsKey(k)) {
+          _paymentIcons[k] = IconData(v as int, fontFamily: 'MaterialIcons');
+        }
+      });
+    }
+
+    final payColorsStr = prefs.getString('app_payment_color_values');
+    if (payColorsStr != null) {
+      final Map<String, dynamic> decoded = jsonDecode(payColorsStr);
+      decoded.forEach((k, v) {
+        if (_paymentColors.containsKey(k)) {
+          _paymentColors[k] = Color(v as int);
         }
       });
     }
   }
 
-  Color _colorOf(String category) =>
-      _categoryColors[category] ?? Colors.blueGrey;
+  Color _colorOf(String category) {
+    if (!_categoryColors.containsKey(category)) return Colors.red;
+    return _categoryColors[category] ?? Colors.blueGrey;
+  }
 
-  IconData _iconOf(String category) =>
-      _categoryIcons[category] ?? Icons.category;
+  IconData _iconOf(String category) {
+    if (!_categoryIcons.containsKey(category)) return Icons.help_outline;
+    return _categoryIcons[category] ?? _getDefaultCategoryIcon(category);
+  }
 
-  Future<void> _showQuickAddCategoryDialog(StateSetter setModalState) async {
+  IconData _paymentIconOf(String payment) {
+    if (!_paymentIcons.containsKey(payment)) return Icons.help_outline;
+    return _paymentIcons[payment] ?? _getDefaultPaymentIcon(payment);
+  }
+
+  Color _paymentColorOf(String payment) {
+    if (!_paymentColors.containsKey(payment)) return Colors.red;
+    return _paymentColors[payment] ?? _getDefaultPaymentColor(payment);
+  }
+
+  Future<void> _showQuickAddCategoryDialog(
+      StateSetter setModalState, ValueChanged<String> onAdded) async {
     final controller = TextEditingController();
+    IconData selectedIcon = _selectableCategoryIcons.first;
+    Color selectedColor = _availableColors.first;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(T.get('addCategory')),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: T.get('categoryName'),
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(T.get('cancel'))),
-          ElevatedButton(
-            onPressed: () async {
-              final text = controller.text.trim();
-              if (text.isNotEmpty && !_categoryIcons.containsKey(text)) {
-                setState(() {
-                  _categoryIcons[text] = Icons.label;
-                  _categoryColors[text] = Colors.blueGrey;
-                });
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setString('app_categories_list',
-                    jsonEncode(_categoryIcons.keys.toList()));
-                setModalState(() {});
-              }
-              if (mounted) Navigator.pop(ctx);
-            },
-            child: Text(T.get('save')),
-          ),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(T.get('addCategory')),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: T.get('categoryName'),
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(T.get('selectIcon'),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _selectableCategoryIcons.map((icon) {
+                      final isSelected =
+                          selectedIcon.codePoint == icon.codePoint;
+                      return GestureDetector(
+                        onTap: () => setDialogState(() => selectedIcon = icon),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primaryContainer
+                                : Colors.transparent,
+                            border: Border.all(
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(icon,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Colors.grey),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(T.get('pickColor'),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _availableColors.map((color) {
+                      final isSelected = selectedColor.value == color.value;
+                      return GestureDetector(
+                        onTap: () =>
+                            setDialogState(() => selectedColor = color),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: isSelected
+                                ? Border.all(color: Colors.white, width: 3)
+                                : null,
+                            boxShadow: [
+                              if (isSelected)
+                                BoxShadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 4,
+                                    spreadRadius: 1)
+                            ],
+                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check,
+                                  color: Colors.white, size: 18)
+                              : null,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(T.get('cancel'))),
+              ElevatedButton(
+                onPressed: () async {
+                  final text = controller.text.trim();
+                  if (text.isNotEmpty && !_categoryIcons.containsKey(text)) {
+                    setState(() {
+                      _categoryIcons[text] = selectedIcon;
+                      _categoryColors[text] = selectedColor;
+                    });
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString('app_categories_list',
+                        jsonEncode(_categoryIcons.keys.toList()));
+                    await prefs.setString(
+                        'app_category_icon_codes',
+                        jsonEncode(_categoryIcons
+                            .map((k, v) => MapEntry(k, v.codePoint))));
+                    await prefs.setString(
+                        'app_category_color_values',
+                        jsonEncode(_categoryColors
+                            .map((k, v) => MapEntry(k, v.value))));
+
+                    onAdded(text);
+                    setModalState(() {});
+                  }
+                  if (mounted) Navigator.pop(ctx);
+                },
+                child: Text(T.get('save')),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Future<void> _showQuickAddPaymentDialog(StateSetter setModalState) async {
+  Future<void> _showQuickAddPaymentDialog(
+      StateSetter setModalState, ValueChanged<String> onAdded) async {
     final controller = TextEditingController();
+    IconData selectedIcon = _selectablePaymentIcons.first;
+    Color selectedColor = _availableColors.first;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(T.get('addPayment')),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: T.get('paymentName'),
-            border: const OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(T.get('cancel'))),
-          ElevatedButton(
-            onPressed: () async {
-              final text = controller.text.trim();
-              if (text.isNotEmpty && !_paymentIcons.containsKey(text)) {
-                setState(() {
-                  _paymentIcons[text] = Icons.payment;
-                });
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setString('app_payments_list',
-                    jsonEncode(_paymentIcons.keys.toList()));
-                setModalState(() {});
-              }
-              if (mounted) Navigator.pop(ctx);
-            },
-            child: Text(T.get('save')),
-          ),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(T.get('addPayment')),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: T.get('paymentName'),
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(T.get('selectIcon'),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _selectablePaymentIcons.map((icon) {
+                      final isSelected =
+                          selectedIcon.codePoint == icon.codePoint;
+                      return GestureDetector(
+                        onTap: () => setDialogState(() => selectedIcon = icon),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .secondaryContainer
+                                : Colors.transparent,
+                            border: Border.all(
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.secondary
+                                    : Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(icon,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.grey),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(T.get('pickColor'),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _availableColors.map((color) {
+                      final isSelected = selectedColor.value == color.value;
+                      return GestureDetector(
+                        onTap: () =>
+                            setDialogState(() => selectedColor = color),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: isSelected
+                                ? Border.all(color: Colors.white, width: 3)
+                                : null,
+                            boxShadow: [
+                              if (isSelected)
+                                BoxShadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 4,
+                                    spreadRadius: 1)
+                            ],
+                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check,
+                                  color: Colors.white, size: 18)
+                              : null,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(T.get('cancel'))),
+              ElevatedButton(
+                onPressed: () async {
+                  final text = controller.text.trim();
+                  if (text.isNotEmpty && !_paymentIcons.containsKey(text)) {
+                    setState(() {
+                      _paymentIcons[text] = selectedIcon;
+                      _paymentColors[text] = selectedColor;
+                    });
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString('app_payments_list',
+                        jsonEncode(_paymentIcons.keys.toList()));
+                    await prefs.setString(
+                        'app_payment_icon_codes',
+                        jsonEncode(_paymentIcons
+                            .map((k, v) => MapEntry(k, v.codePoint))));
+                    await prefs.setString(
+                        'app_payment_color_values',
+                        jsonEncode(_paymentColors
+                            .map((k, v) => MapEntry(k, v.value))));
+
+                    onAdded(text);
+                    setModalState(() {});
+                  }
+                  if (mounted) Navigator.pop(ctx);
+                },
+                child: Text(T.get('save')),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -299,7 +686,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildCategoryField({
     required String selected,
     required ValueChanged<String?> onChanged,
-    required VoidCallback onPickColor,
     required StateSetter setModalState,
     bool outlined = false,
   }) {
@@ -316,16 +702,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }).toList();
 
-    items.add(
-      DropdownMenuItem(
-        value: '__add_new__',
-        child: Text(T.get('addCustomCategory'),
-            style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.bold)),
-      ),
-    );
-
     final selectedValue = _categoryIcons.containsKey(selected)
         ? selected
         : _categoryIcons.keys.first;
@@ -341,69 +717,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             items: items,
             onChanged: (val) {
-              if (val == '__add_new__') {
-                _showQuickAddCategoryDialog(setModalState);
-              } else {
+              if (val != null) {
                 onChanged(val);
               }
             },
           ),
         ),
+        const SizedBox(width: 8),
         IconButton(
-          tooltip: T.get('changeColor'),
-          icon: Icon(Icons.palette, color: _colorOf(selectedValue)),
-          onPressed: onPickColor,
+          icon: const Icon(Icons.add_circle_outline, size: 28),
+          color: Theme.of(context).colorScheme.primary,
+          tooltip: T.get('addCategory'),
+          onPressed: () {
+            _showQuickAddCategoryDialog(setModalState, (newCat) {
+              onChanged(newCat);
+            });
+          },
         ),
       ],
     );
   }
 
-  Future<void> _showColorPickerDialog(String category) {
-    return showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('${T.get('changeColor')} "${T.get(category)}"'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildPaymentField({
+    required String selected,
+    required ValueChanged<String?> onChanged,
+    required StateSetter setModalState,
+    bool outlined = false,
+  }) {
+    List<DropdownMenuItem<String>> paymentItems =
+        _paymentIcons.keys.map((method) {
+      return DropdownMenuItem(
+        value: method,
+        child: Row(
           children: [
-            Text(T.get('pickColor'),
-                style: const TextStyle(fontSize: 14, color: Colors.grey)),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: _availableColors.map((color) {
-                final isSelected = _categoryColors[category] == color;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => _categoryColors[category] = color);
-                    Navigator.pop(ctx);
-                  },
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: isSelected
-                          ? Border.all(color: Colors.white, width: 3)
-                          : null,
-                    ),
-                    child: isSelected
-                        ? const Icon(Icons.check, color: Colors.white)
-                        : null,
-                  ),
-                );
-              }).toList(),
-            ),
+            Icon(_paymentIconOf(method),
+                color: _paymentColorOf(method), size: 20),
+            const SizedBox(width: 8),
+            Text(T.get(method)),
           ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: Text(T.get('close'))),
-        ],
-      ),
+      );
+    }).toList();
+
+    final selectedValue = _paymentIcons.containsKey(selected)
+        ? selected
+        : _paymentIcons.keys.first;
+
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            value: selectedValue,
+            decoration: InputDecoration(
+              labelText: T.get('paymentMethodLabel'),
+              border: outlined ? const OutlineInputBorder() : null,
+            ),
+            items: paymentItems,
+            onChanged: (val) {
+              if (val != null) {
+                onChanged(val);
+              }
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline, size: 28),
+          color: Theme.of(context).colorScheme.primary,
+          tooltip: T.get('addPayment'),
+          onPressed: () {
+            _showQuickAddPaymentDialog(setModalState, (newPay) {
+              onChanged(newPay);
+            });
+          },
+        ),
+      ],
     );
   }
 
@@ -421,31 +809,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setStateDialog) {
-          List<DropdownMenuItem<String>> paymentItems =
-              _paymentIcons.keys.map((method) {
-            return DropdownMenuItem(
-              value: method,
-              child: Row(
-                children: [
-                  Icon(_paymentIcons[method] ?? Icons.payment,
-                      color: Colors.blue),
-                  const SizedBox(width: 8),
-                  Text(T.get(method)),
-                ],
-              ),
-            );
-          }).toList();
-
-          paymentItems.add(
-            DropdownMenuItem(
-              value: '__add_new__',
-              child: Text(T.get('addCustomPayment'),
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold)),
-            ),
-          );
-
           return AlertDialog(
             title: Text(T.get('edit')),
             content: SingleChildScrollView(
@@ -468,26 +831,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     setModalState: setStateDialog,
                     onChanged: (val) =>
                         setStateDialog(() => selectedCategory = val!),
-                    onPickColor: () async {
-                      await _showColorPickerDialog(selectedCategory);
-                      setStateDialog(() {});
-                    },
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: _paymentIcons.containsKey(selectedPaymentMethod)
-                        ? selectedPaymentMethod
-                        : _paymentIcons.keys.first,
-                    decoration:
-                        InputDecoration(labelText: T.get('paymentMethodLabel')),
-                    items: paymentItems,
-                    onChanged: (val) {
-                      if (val == '__add_new__') {
-                        _showQuickAddPaymentDialog(setStateDialog);
-                      } else {
-                        setStateDialog(() => selectedPaymentMethod = val!);
-                      }
-                    },
+                  _buildPaymentField(
+                    selected: selectedPaymentMethod,
+                    setModalState: setStateDialog,
+                    onChanged: (val) =>
+                        setStateDialog(() => selectedPaymentMethod = val!),
                   ),
                 ],
               ),
@@ -532,31 +882,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
-            List<DropdownMenuItem<String>> paymentItems =
-                _paymentIcons.keys.map((method) {
-              return DropdownMenuItem(
-                value: method,
-                child: Row(
-                  children: [
-                    Icon(_paymentIcons[method] ?? Icons.payment,
-                        color: Colors.blue),
-                    const SizedBox(width: 8),
-                    Text(T.get(method)),
-                  ],
-                ),
-              );
-            }).toList();
-
-            paymentItems.add(
-              DropdownMenuItem(
-                value: '__add_new__',
-                child: Text(T.get('addCustomPayment'),
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.bold)),
-              ),
-            );
-
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx).viewInsets.bottom +
@@ -593,27 +918,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       setModalState: setModalState,
                       onChanged: (val) =>
                           setModalState(() => selectedCategory = val!),
-                      onPickColor: () async {
-                        await _showColorPickerDialog(selectedCategory);
-                        setModalState(() {});
-                      },
                     ),
                     const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: _paymentIcons.containsKey(selectedPaymentMethod)
-                          ? selectedPaymentMethod
-                          : _paymentIcons.keys.first,
-                      decoration: InputDecoration(
-                          labelText: T.get('paymentMethodLabel'),
-                          border: const OutlineInputBorder()),
-                      items: paymentItems,
-                      onChanged: (val) {
-                        if (val == '__add_new__') {
-                          _showQuickAddPaymentDialog(setModalState);
-                        } else {
-                          setModalState(() => selectedPaymentMethod = val!);
-                        }
-                      },
+                    _buildPaymentField(
+                      selected: selectedPaymentMethod,
+                      outlined: true,
+                      setModalState: setModalState,
+                      onChanged: (val) =>
+                          setModalState(() => selectedPaymentMethod = val!),
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -855,7 +1167,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildTransactionItem(BuildContext context, TransactionModel tx) {
     final formattedAmount = NumberFormat('#,##0.00').format(tx.amount);
     final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(tx.date);
-    final categoryColor = _colorOf(tx.category);
+
+    final isCategoryValid = _categoryIcons.containsKey(tx.category);
+    final isPaymentValid = _paymentIcons.containsKey(tx.paymentMethod);
+
+    final categoryColor = isCategoryValid ? _colorOf(tx.category) : Colors.red;
+    final categoryIcon =
+        isCategoryValid ? _iconOf(tx.category) : Icons.help_outline;
+    final paymentIcon =
+        isPaymentValid ? _paymentIconOf(tx.paymentMethod) : Icons.help_outline;
+    final paymentColor =
+        isPaymentValid ? _paymentColorOf(tx.paymentMethod) : Colors.red;
 
     return Dismissible(
       key: ValueKey(tx.id),
@@ -883,7 +1205,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: categoryColor.withOpacity(0.2),
-              child: Icon(_iconOf(tx.category), color: categoryColor),
+              child: Icon(categoryIcon, color: categoryColor),
             ),
             title: Text(tx.title,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -894,12 +1216,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Icon(_paymentIcons[tx.paymentMethod] ?? Icons.payment,
-                        size: 14, color: Colors.grey),
+                    Icon(paymentIcon, size: 14, color: paymentColor),
                     const SizedBox(width: 4),
-                    Text(T.get(tx.paymentMethod),
-                        style:
-                            const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text(
+                      isPaymentValid
+                          ? T.get(tx.paymentMethod)
+                          : tx.paymentMethod,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: paymentColor,
+                          fontWeight: isPaymentValid
+                              ? FontWeight.normal
+                              : FontWeight.bold),
+                    ),
                   ],
                 ),
               ],
