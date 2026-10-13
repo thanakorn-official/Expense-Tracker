@@ -274,7 +274,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return AlertDialog(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text(isEditing ? T.get('edit') : T.get('addCategory')),
+            title: Text(isEditing ? T.get('editItem') : T.get('addCategory')),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -415,7 +415,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return AlertDialog(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text(isEditing ? T.get('edit') : T.get('addPayment')),
+            title: Text(isEditing ? T.get('editItem') : T.get('addPayment')),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -818,12 +818,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               value: 'light', child: Text(T.get('lightMode'))),
                           DropdownMenuItem(
                               value: 'dark', child: Text(T.get('darkMode'))),
-                          DropdownMenuItem(
-                              value: 'black_cat',
-                              child: Text(T.get('blackCat'))),
-                          DropdownMenuItem(
-                              value: 'glass_cup',
-                              child: Text(T.get('glassCup'))),
                         ],
                         onChanged: (val) async {
                           if (val != null) {
@@ -848,9 +842,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing: DropdownButton<String>(
                     value: currentLang,
                     underline: const SizedBox(),
-                    items: const [
-                      DropdownMenuItem(value: 'th', child: Text('ภาษาไทย')),
-                      DropdownMenuItem(value: 'en', child: Text('English')),
+                    items: [
+                      DropdownMenuItem(
+                          value: 'th', child: Text(T.get('thaiLanguage'))),
+                      DropdownMenuItem(
+                          value: 'en', child: Text(T.get('englishLanguage'))),
                     ],
                     onChanged: (val) {
                       if (val != null) languageNotifier.value = val;

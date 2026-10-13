@@ -20,7 +20,9 @@ void main() async {
   languageNotifier.value = savedLang;
 
   final savedTheme = prefs.getString('app_theme_mode') ?? 'light';
-  themeNotifier.value = savedTheme;
+  // เครื่องที่เคยบันทึกธีมที่ถูกถอดออกไปแล้ว ให้กลับไปใช้โหมดสว่าง
+  themeNotifier.value =
+      (savedTheme == 'light' || savedTheme == 'dark') ? savedTheme : 'light';
 
   languageNotifier.addListener(() async {
     final prefs = await SharedPreferences.getInstance();

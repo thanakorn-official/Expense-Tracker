@@ -1347,7 +1347,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Scaffold(
           appBar: AppBar(
             title: Text(T.get('appTitle')),
-            backgroundColor: Theme.of(context).colorScheme.inversePrimary,
             actions: [
               IconButton(
                 icon: const Icon(Icons.settings),
