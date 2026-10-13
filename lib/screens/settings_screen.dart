@@ -540,8 +540,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _confirmDeleteCategory(String category, StateSetter setModalState) {
-    showDialog(
+  Future<bool?> _confirmDeleteCategory(String category) {
+    return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -549,21 +549,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: Text('${T.get('deleteConfirmContent')} ${T.get(category)}'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () => Navigator.pop(ctx, false),
               child: Text(T.get('cancel'))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red, foregroundColor: Colors.white),
-            onPressed: () async {
-              setState(() {
-                _categories.remove(category);
-                _categoryIconCodes.remove(category);
-                _categoryColorValues.remove(category);
-              });
-              await _saveCategories();
-              setModalState(() {});
-              if (mounted) Navigator.pop(ctx);
-            },
+            onPressed: () => Navigator.pop(ctx, true),
             child: Text(T.get('delete')),
           ),
         ],
@@ -571,8 +562,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _confirmDeletePayment(String payment, StateSetter setModalState) {
-    showDialog(
+  Future<bool?> _confirmDeletePayment(String payment) {
+    return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -580,21 +571,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: Text('${T.get('deleteConfirmContent')} ${T.get(payment)}'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () => Navigator.pop(ctx, false),
               child: Text(T.get('cancel'))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red, foregroundColor: Colors.white),
-            onPressed: () async {
-              setState(() {
-                _payments.remove(payment);
-                _paymentIconCodes.remove(payment);
-                _paymentColorValues.remove(payment);
-              });
-              await _savePayments();
-              setModalState(() {});
-              if (mounted) Navigator.pop(ctx);
-            },
+            onPressed: () => Navigator.pop(ctx, true),
             child: Text(T.get('delete')),
           ),
         ],
@@ -621,31 +603,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 itemBuilder: (context, index) {
                   final cat = _categories[index];
                   final catColor = _getCategoryColor(cat);
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: catColor.withOpacity(0.2),
-                        child: Icon(_getCategoryIcon(cat), color: catColor),
+                  return Dismissible(
+                    key: ValueKey(cat),
+                    direction: DismissDirection.endToStart,
+                    confirmDismiss: (direction) async {
+                      return await _confirmDeleteCategory(cat);
+                    },
+                    onDismissed: (direction) async {
+                      setState(() {
+                        _categories.remove(cat);
+                        _categoryIconCodes.remove(cat);
+                        _categoryColorValues.remove(cat);
+                      });
+                      await _saveCategories();
+                      setModalState(() {});
+                    },
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      title: Text(T.get(cat),
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                      trailing: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _showCategoryDialog(setModalState,
-                                oldCategory: cat),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () =>
-                                _confirmDeleteCategory(cat, setModalState),
-                          ),
+                          Icon(Icons.delete, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text('ลบ',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                         ],
+                      ),
+                    ),
+                    child: Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: catColor.withOpacity(0.2),
+                          child: Icon(_getCategoryIcon(cat), color: catColor),
+                        ),
+                        title: Text(T.get(cat),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        onTap: () => _showCategoryDialog(setModalState,
+                            oldCategory: cat),
                       ),
                     ),
                   );
@@ -686,31 +692,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 itemBuilder: (context, index) {
                   final pay = _payments[index];
                   final payColor = _getPaymentColor(pay);
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: payColor.withOpacity(0.2),
-                        child: Icon(_getPaymentIcon(pay), color: payColor),
+                  return Dismissible(
+                    key: ValueKey(pay),
+                    direction: DismissDirection.endToStart,
+                    confirmDismiss: (direction) async {
+                      return await _confirmDeletePayment(pay);
+                    },
+                    onDismissed: (direction) async {
+                      setState(() {
+                        _payments.remove(pay);
+                        _paymentIconCodes.remove(pay);
+                        _paymentColorValues.remove(pay);
+                      });
+                      await _savePayments();
+                      setModalState(() {});
+                    },
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      title: Text(T.get(pay),
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                      trailing: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _showPaymentDialog(setModalState,
-                                oldPayment: pay),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () =>
-                                _confirmDeletePayment(pay, setModalState),
-                          ),
+                          Icon(Icons.delete, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text('ลบ',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                         ],
+                      ),
+                    ),
+                    child: Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: payColor.withOpacity(0.2),
+                          child: Icon(_getPaymentIcon(pay), color: payColor),
+                        ),
+                        title: Text(T.get(pay),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        onTap: () =>
+                            _showPaymentDialog(setModalState, oldPayment: pay),
                       ),
                     ),
                   );

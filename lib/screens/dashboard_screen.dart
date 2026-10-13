@@ -1135,16 +1135,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _handleDelete(BuildContext context, TransactionModel tx) {
     setState(() => _pendingDeleteIds.add(tx.id));
     bool isUndone = false;
+
     final messenger = ScaffoldMessenger.of(context);
-    messenger.clearSnackBars();
+    // ซ่อน SnackBar เดิมทันที เพื่อไม่ให้เกิดคิวสะสม
+    messenger.hideCurrentSnackBar();
+
     messenger
         .showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
             margin: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
-            backgroundColor: Colors.black.withOpacity(0.75),
-            content: Text('${T.get('deleted')} ${tx.title}',
-                style: const TextStyle(color: Colors.white)),
+            backgroundColor: Colors.black.withOpacity(0.85),
+            content: Text(
+              '${T.get('deleted')} ${tx.title}',
+              style: const TextStyle(color: Colors.white),
+            ),
             action: SnackBarAction(
               label: T.get('undo'),
               textColor: Colors.amberAccent,
@@ -1216,18 +1222,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 2),
                 Row(
                   children: [
+                    Icon(categoryIcon, size: 14, color: categoryColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      isCategoryValid ? T.get(tx.category) : tx.category,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: categoryColor,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    const Text(' • '),
                     Icon(paymentIcon, size: 14, color: paymentColor),
                     const SizedBox(width: 4),
                     Text(
                       isPaymentValid
                           ? T.get(tx.paymentMethod)
                           : tx.paymentMethod,
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: paymentColor,
-                          fontWeight: isPaymentValid
-                              ? FontWeight.normal
-                              : FontWeight.bold),
+                      style: TextStyle(fontSize: 12, color: paymentColor),
                     ),
                   ],
                 ),
