@@ -114,7 +114,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final Set<String> _pendingDeleteIds = {};
 
-  // รายการธุรกรรมแยกตามผู้ใช้ guests/{guestId}/transactions
   CollectionReference get _transactionsCollection => FirebaseFirestore.instance
       .collection('guests')
       .doc(GuestService.guestId)
@@ -132,6 +131,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   IconData _getDefaultCategoryIcon(String cat) {
+    if (cat == 'transfer') return Icons.swap_horiz;
     switch (cat) {
       case 'อาหาร':
         return Icons.restaurant;
@@ -161,6 +161,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Color _getDefaultCategoryColor(String cat) {
+    if (cat == 'transfer') return Colors.blueGrey;
     switch (cat) {
       case 'อาหาร':
         return Colors.orange;
@@ -292,11 +293,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Color _colorOf(String category) {
+    if (category == 'transfer') return Colors.blueGrey;
     if (!_categoryColors.containsKey(category)) return Colors.red;
     return _categoryColors[category] ?? Colors.blueGrey;
   }
 
   IconData _iconOf(String category) {
+    if (category == 'transfer') return Icons.swap_horiz;
     if (!_categoryIcons.containsKey(category)) return Icons.help_outline;
     return _categoryIcons[category] ?? _getDefaultCategoryIcon(category);
   }
@@ -589,6 +592,149 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showTransferSheet(BuildContext context) {
+    final amountController = TextEditingController();
+    final noteController = TextEditingController();
+
+    String fromPayment = _paymentIcons.keys.first;
+    String toPayment = _paymentIcons.keys.length > 1
+        ? _paymentIcons.keys.elementAt(1)
+        : _paymentIcons.keys.first;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom +
+                    MediaQuery.of(ctx).padding.bottom +
+                    16,
+                left: 16,
+                right: 16,
+                top: 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('โอนเงินระหว่างบัญชี',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    TextField(
+                        controller: amountController,
+                        decoration: const InputDecoration(
+                            labelText: 'จำนวนเงิน',
+                            border: OutlineInputBorder()),
+                        keyboardType: TextInputType.number),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: fromPayment,
+                      decoration: const InputDecoration(
+                          labelText: 'จากบัญชี (ต้นทาง)',
+                          border: OutlineInputBorder()),
+                      items: _paymentIcons.keys.map((method) {
+                        return DropdownMenuItem(
+                          value: method,
+                          child: Row(
+                            children: [
+                              Icon(_paymentIconOf(method),
+                                  color: _paymentColorOf(method), size: 20),
+                              const SizedBox(width: 8),
+                              Text(T.get(method)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) =>
+                          setModalState(() => fromPayment = val!),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: toPayment,
+                      decoration: const InputDecoration(
+                          labelText: 'เข้าบัญชี (ปลายทาง)',
+                          border: OutlineInputBorder()),
+                      items: _paymentIcons.keys.map((method) {
+                        return DropdownMenuItem(
+                          value: method,
+                          child: Row(
+                            children: [
+                              Icon(_paymentIconOf(method),
+                                  color: _paymentColorOf(method), size: 20),
+                              const SizedBox(width: 8),
+                              Text(T.get(method)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) => setModalState(() => toPayment = val!),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                        controller: noteController,
+                        decoration: const InputDecoration(
+                            labelText: 'บันทึกช่วยจำ (ไม่บังคับ)',
+                            border: OutlineInputBorder())),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            foregroundColor: Colors.white),
+                        onPressed: () {
+                          if (amountController.text.isEmpty ||
+                              fromPayment == toPayment) return;
+
+                          _transactionsCollection.add({
+                            'title': noteController.text.isNotEmpty
+                                ? noteController.text
+                                : 'โอนออกไป ${T.get(toPayment)}',
+                            'amount':
+                                double.tryParse(amountController.text) ?? 0.0,
+                            'date': DateTime.now().toIso8601String(),
+                            'isExpense': 1,
+                            'category': 'transfer',
+                            'paymentMethod': fromPayment,
+                          });
+
+                          _transactionsCollection.add({
+                            'title': noteController.text.isNotEmpty
+                                ? noteController.text
+                                : 'รับโอนจาก ${T.get(fromPayment)}',
+                            'amount':
+                                double.tryParse(amountController.text) ?? 0.0,
+                            'date': DateTime.now().toIso8601String(),
+                            'isExpense': 0,
+                            'category': 'transfer',
+                            'paymentMethod': toPayment,
+                          });
+
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('ยืนยันการโอนเงิน',
+                            style: TextStyle(fontSize: 16)),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildSummaryItem(String title, double amount, Color color) {
     return Column(
       children: [
@@ -606,8 +752,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildSummaryRow(double income, double expense) {
-    final balance = income - expense;
+  Widget _buildSummaryRow(double income, double expense, double balance) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
@@ -707,9 +852,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }).toList();
 
-    final selectedValue = _categoryIcons.containsKey(selected)
-        ? selected
-        : _categoryIcons.keys.first;
+    if (selected == 'transfer') {
+      items.add(
+        const DropdownMenuItem(
+          value: 'transfer',
+          child: Row(
+            children: [
+              Icon(Icons.swap_horiz, color: Colors.blueGrey, size: 20),
+              SizedBox(width: 8),
+              Text('โอนเงิน'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final selectedValue =
+        (_categoryIcons.containsKey(selected) || selected == 'transfer')
+            ? selected
+            : _categoryIcons.keys.first;
 
     return Row(
       children: [
@@ -803,9 +964,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _showEditDialog(TransactionModel tx) {
     final titleController = TextEditingController(text: tx.title);
     final amountController = TextEditingController(text: tx.amount.toString());
-    String selectedCategory = _categoryIcons.containsKey(tx.category)
-        ? tx.category
-        : _categoryIcons.keys.first;
+    String selectedCategory =
+        (_categoryIcons.containsKey(tx.category) || tx.category == 'transfer')
+            ? tx.category
+            : _categoryIcons.keys.first;
     String selectedPaymentMethod = _paymentIcons.containsKey(tx.paymentMethod)
         ? tx.paymentMethod
         : _paymentIcons.keys.first;
@@ -1142,7 +1304,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     bool isUndone = false;
 
     final messenger = ScaffoldMessenger.of(context);
-    // ซ่อน SnackBar เดิมทันที เพื่อไม่ให้เกิดคิวสะสม
     messenger.hideCurrentSnackBar();
 
     messenger
@@ -1179,7 +1340,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final formattedAmount = NumberFormat('#,##0.00').format(tx.amount);
     final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(tx.date);
 
-    final isCategoryValid = _categoryIcons.containsKey(tx.category);
+    final isCategoryValid =
+        _categoryIcons.containsKey(tx.category) || tx.category == 'transfer';
     final isPaymentValid = _paymentIcons.containsKey(tx.paymentMethod);
 
     final categoryColor = isCategoryValid ? _colorOf(tx.category) : Colors.red;
@@ -1230,7 +1392,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Icon(categoryIcon, size: 14, color: categoryColor),
                     const SizedBox(width: 4),
                     Text(
-                      isCategoryValid ? T.get(tx.category) : tx.category,
+                      tx.category == 'transfer'
+                          ? 'โอนเงิน'
+                          : (isCategoryValid
+                              ? T.get(tx.category)
+                              : tx.category),
                       style: TextStyle(
                           fontSize: 12,
                           color: categoryColor,
@@ -1270,7 +1436,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           allTransactions.where((tx) => _groupKey(tx) == latestKey).toList();
     }
 
-    final filteredForStats = scopeTransactions.where((tx) {
+    final allFilteredTx = scopeTransactions.where((tx) {
       if (_filterType == 'income' && tx.isExpense) return false;
       if (_filterType == 'expense' && !tx.isExpense) return false;
       if (_paymentFilter != 'all' && tx.paymentMethod != _paymentFilter)
@@ -1278,12 +1444,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return true;
     }).toList();
 
+    final filteredForStats =
+        allFilteredTx.where((tx) => tx.category != 'transfer').toList();
+
     final totalIncome = filteredForStats
         .where((tx) => !tx.isExpense)
         .fold(0.0, (sum, tx) => sum + tx.amount);
     final totalExpense = filteredForStats
         .where((tx) => tx.isExpense)
         .fold(0.0, (sum, tx) => sum + tx.amount);
+
+    final realIncome = allFilteredTx
+        .where((tx) => !tx.isExpense)
+        .fold(0.0, (sum, tx) => sum + tx.amount);
+    final realExpense = allFilteredTx
+        .where((tx) => tx.isExpense)
+        .fold(0.0, (sum, tx) => sum + tx.amount);
+    final realBalance = realIncome - realExpense;
+
     final listItems = _buildListItems(_filterAndSort(allTransactions));
 
     return CustomScrollView(
@@ -1300,7 +1478,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 )
               else if (filteredForStats.isNotEmpty)
                 _buildPieChart(filteredForStats),
-              _buildSummaryRow(totalIncome, totalExpense),
+              _buildSummaryRow(totalIncome, totalExpense, realBalance),
               const Divider(height: 24),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -1353,6 +1531,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           appBar: AppBar(
             title: Text(T.get('appTitle')),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.swap_horiz),
+                tooltip: 'โอนเงินระหว่างบัญชี',
+                onPressed: () => _showTransferSheet(context),
+              ),
               IconButton(
                 icon: const Icon(Icons.settings),
                 tooltip: T.get('settings'),
